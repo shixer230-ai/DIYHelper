@@ -4,7 +4,6 @@ import '../models/hardware_item.dart';
 import '../storage/build_plan_store.dart';
 import '../storage/hardware_store.dart';
 import '../utils/category_icons.dart';
-import 'catalog_page.dart';
 import 'hardware_form_page.dart';
 
 /// 硬件清单主页：展示已录入的硬件，可新增、删除，也可进入硬件库选型号。
@@ -22,6 +21,11 @@ class _HardwareListPageState extends State<HardwareListPage> {
   final _store = HardwareStore();
   List<HardwareItem> _items = [];
   bool _loading = true;
+
+  // 清单分类 Tab 的顺序（可左右滑动切换）。
+  static const _categories = [
+    '整机方案', 'CPU', '显卡', '主板', '内存', '硬盘', '电源', '机箱', '其他',
+  ];
 
   @override
   void initState() {
@@ -44,15 +48,6 @@ class _HardwareListPageState extends State<HardwareListPage> {
       MaterialPageRoute(builder: (_) => const HardwareFormPage()),
     );
     if (saved == true) _load();
-  }
-
-  Future<void> _openCatalog() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const CatalogPage()),
-    );
-    // 从硬件库返回后刷新，把刚加入的型号显示出来。
-    _load();
   }
 
   Future<void> _openPlan(HardwareItem item) async {
@@ -88,57 +83,65 @@ class _HardwareListPageState extends State<HardwareListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）'),
-      ),
-      body: _buildBody(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openForm,
-        tooltip: '自定义添加',
-        child: const Icon(Icons.add),
+    return DefaultTabController(
+      length: _categories.length,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）',
+          ),
+          bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: [for (final c in _categories) Tab(text: c)],
+          ),
+        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : TabBarView(
+                children: [for (final c in _categories) _categoryTab(c)],
+              ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _openForm,
+          tooltip: '自定义添加',
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.memory, size: 64, color: Colors.grey),
-            const SizedBox(height: 12),
-            const Text('还没有硬件记录'),
-            const SizedBox(height: 4),
-            const Text(
-              '去「硬件库」选型号，或点 + 自定义添加',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: _openCatalog,
-              icon: const Icon(Icons.menu_book),
-              label: const Text('去硬件库选型号'),
-            ),
-          ],
-        ),
-      );
-    }
+  Widget _categoryTab(String category) {
+    final items = _items.where((e) => e.category == category).toList();
+    if (items.isEmpty) return _emptyCategory(category);
     return ListView.builder(
       padding: const EdgeInsets.all(12),
-      itemCount: _items.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final item = _items[index];
+        final item = items[index];
         return _HardwareCard(
           item: item,
           onDelete: () => _confirmDelete(item),
           onTap: item.planId != null ? () => _openPlan(item) : null,
         );
       },
+    );
+  }
+
+  Widget _emptyCategory(String category) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(categoryIcon(category), size: 48, color: Colors.grey),
+          const SizedBox(height: 8),
+          Text('还没有「$category」的记录'),
+          const SizedBox(height: 4),
+          const Text(
+            '可去「硬件库」选型号，或点右下角 + 添加',
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 }

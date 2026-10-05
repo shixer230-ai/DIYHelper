@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../analysis/value_index.dart';
 import '../models/hardware_spec.dart';
 import '../storage/user_spec_store.dart';
 
@@ -24,6 +25,11 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
 
   final List<_EntryPair> _specPairs = [];
   final List<_EntryPair> _benchPairs = [];
+  final Map<String, TextEditingController> _valueControllers = {};
+
+  /// 当前品类参与「分析」排行的性价比项目。
+  List<ValueItem> get _valueItems =>
+      kValueItems.where((e) => e.category == _category).toList();
 
   @override
   void initState() {
@@ -31,6 +37,9 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     // 各给一行空输入，方便直接填写。
     _specPairs.add(_EntryPair());
     _benchPairs.add(_EntryPair());
+    for (final item in kValueItems) {
+      _valueControllers[item.label] = TextEditingController();
+    }
   }
 
   @override
@@ -43,6 +52,9 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     for (final p in _benchPairs) {
       p.dispose();
     }
+    for (final c in _valueControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -53,6 +65,16 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
         .toList();
   }
 
+  /// 收集「性价比跑分」：只取当前品类对应项目里填了数值的，label 用分析约定的精确名。
+  List<SpecEntry> _collectValueBenches() {
+    final result = <SpecEntry>[];
+    for (final item in _valueItems) {
+      final text = _valueControllers[item.label]?.text.trim() ?? '';
+      if (text.isNotEmpty) result.add(SpecEntry(item.benchLabel, text));
+    }
+    return result;
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final spec = HardwareSpec(
@@ -61,7 +83,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
       brand: _brandController.text.trim(),
       model: _modelController.text.trim(),
       specs: _collect(_specPairs),
-      benchmarks: _collect(_benchPairs),
+      benchmarks: [..._collect(_benchPairs), ..._collectValueBenches()],
     );
     setState(() => _saving = true);
     await _store.add(spec);
@@ -121,6 +143,10 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
               hint: '例如：3DMark Time Spy → 约 10500',
               pairs: _benchPairs,
             ),
+            if (_valueItems.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              _valueBenchEditor(),
+            ],
             const SizedBox(height: 32),
             FilledButton(
               onPressed: _saving ? null : _save,
@@ -205,6 +231,40 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
                   icon: const Icon(Icons.close, size: 20),
                 ),
               ],
+            ),
+          ),
+      ],
+    );
+  }
+  /// 性价比跑分：按当前品类列出「分析」用的跑分项，label 固定，只填数值（可跳过）。
+  Widget _valueBenchEditor() {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '性价比跑分（用于「分析」排行）',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        Text(
+          '填了这几项，这个型号就能参与「分析」页的性价比排行；不填可跳过。',
+          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        for (final item in _valueItems)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TextField(
+              controller: _valueControllers[item.label],
+              decoration: InputDecoration(
+                labelText: item.label,
+                hintText: '如：约 10500',
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
           ),
       ],

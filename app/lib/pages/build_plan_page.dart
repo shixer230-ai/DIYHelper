@@ -142,49 +142,118 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
   Future<void> _saveToItems() async {
     final plan = _current;
     if (plan == null || plan.components.isEmpty) return;
-    final ok = await showDialog<bool>(
+
+    final store = HardwareStore();
+    final items = await store.loadAll();
+    if (!mounted) return;
+    final existingIndex = items.indexWhere((e) => e.planId == plan.id);
+
+    // 首次保存：确认后直接新增。
+    if (existingIndex < 0) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('保存到清单'),
+          content: Text(
+            '把整机方案「${_planName(plan)}」作为一个整体加入「我的硬件清单」吗？',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      await store.add(_newItem(plan, _planName(plan)));
+      _snack('已把「${_planName(plan)}」加入清单');
+      return;
+    }
+
+    // 已经保存过这个方案：让用户选「覆盖原来的 / 另存为新名称 / 取消」。
+    final choice = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('保存到清单'),
+        title: const Text('清单里已有这个方案'),
         content: Text(
-          '把整机方案「${_planName(plan)}」作为一个整体加入「我的硬件清单」吗？',
+          '清单里已经保存过「${_planName(plan)}」，要覆盖原来的条目，还是另存一份新名称的？',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('保存'),
+            onPressed: () => Navigator.pop(context, 'overwrite'),
+            child: const Text('覆盖原来的'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'new'),
+            child: const Text('另存为新名称'),
           ),
         ],
       ),
     );
-    if (ok != true) return;
-    final now = DateTime.now();
-    // 配件摘要：按槽位顺序列出「品类 型号」。
-    final summary = kBuildSlots
-        .map((s) => plan[s.key])
-        .whereType<PlanComponent>()
-        .map((c) => '${c.category} ${c.model}')
-        .join(' · ');
-    final item = HardwareItem(
-      id: '${now.microsecondsSinceEpoch}',
+    if (choice == null) return;
+    if (!mounted) return;
+
+    if (choice == 'overwrite') {
+      // 覆盖：保留原条目的 id 和录入时间，刷新价格/摘要/名称。
+      final old = items[existingIndex];
+      items[existingIndex] = HardwareItem(
+        id: old.id,
+        category: '整机方案',
+        brand: '',
+        model: _planName(plan),
+        price: plan.total,
+        platform: '',
+        spec: _summary(plan),
+        planId: plan.id,
+        createdAt: old.createdAt,
+      );
+      await store.saveAll(items);
+      _snack('已更新清单里的「${_planName(plan)}」');
+    } else {
+      // 另存为新名称：新建一条快照条目，仍关联同一个方案。
+      final name = await showDialog<String>(
+        context: context,
+        builder: (_) => _NameDialog(title: '新名称', initial: _planName(plan)),
+      );
+      if (name == null || name.isEmpty) return;
+      await store.add(_newItem(plan, name));
+      _snack('已把「$name」加入清单');
+    }
+  }
+
+  /// 按槽位顺序列出配件摘要「品类 型号」。
+  String _summary(BuildPlan plan) => kBuildSlots
+      .map((s) => plan[s.key])
+      .whereType<PlanComponent>()
+      .map((c) => '${c.category} ${c.model}')
+      .join(' · ');
+
+  HardwareItem _newItem(BuildPlan plan, String model) {
+    return HardwareItem(
+      id: '${DateTime.now().microsecondsSinceEpoch}',
       category: '整机方案',
       brand: '',
-      model: _planName(plan),
+      model: model,
       price: plan.total,
       platform: '',
-      spec: summary,
+      spec: _summary(plan),
       planId: plan.id,
-      createdAt: now,
+      createdAt: DateTime.now(),
     );
-    await HardwareStore().add(item);
+  }
+
+  void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已把「${item.model}」加入清单')),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   void _replace(String id, BuildPlan updated) {

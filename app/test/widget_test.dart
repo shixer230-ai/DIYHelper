@@ -11,6 +11,7 @@ void main() {
     await tester.pumpWidget(const DiyHelperApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('还没有硬件记录'), findsOneWidget);
+    // 清单页现在按品类分 Tab，空态时首个 Tab（整机方案）显示空提示。
+    expect(find.text('还没有「整机方案」的记录'), findsOneWidget);
   });
 }

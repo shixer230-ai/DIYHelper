@@ -1,4 +1,5 @@
 import '../models/build_plan.dart';
+import '../models/custom_item.dart';
 import '../models/hardware_spec.dart';
 
 /// 一个「分析项目」：某个品类下的某个跑分项，或「整机功耗」这类整机指标。
@@ -154,6 +155,24 @@ List<PlanValue> rankPlans(
       bench: bench,
       price: plan.total,
       index: bench / plan.total * 1000,
+    ));
+  }
+  results.sort((a, b) => b.index.compareTo(a.index));
+  return results;
+}
+
+/// 对一批方案按「自定义项目」的分数排行，分数越高越靠前；没填分数的方案跳过。
+List<PlanValue> rankCustomPlans(List<BuildPlan> plans, CustomItem item) {
+  final results = <PlanValue>[];
+  for (final plan in plans) {
+    final s = item.scoreOf(plan.id);
+    if (s == null) continue;
+    results.add(PlanValue(
+      planName: plan.name.isEmpty ? '未命名方案' : plan.name,
+      partModel: item.scoreLabel,
+      bench: s,
+      price: plan.total,
+      index: s,
     ));
   }
   results.sort((a, b) => b.index.compareTo(a.index));

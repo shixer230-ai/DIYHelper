@@ -7,7 +7,8 @@ import '../utils/category_icons.dart';
 import 'catalog_detail_page.dart';
 import 'user_spec_form_page.dart';
 
-/// 硬件库：按品类分 Tab，左右滑动切换；首个 Tab 是「我的添加」。
+/// 硬件库：顶部关键词搜索；按品类分 Tab，左右滑动切换；首个 Tab 是「我的添加」。
+/// 预置型号在各品类内按品牌分组展示（主流品牌 + 其它）。
 class CatalogPage extends StatefulWidget {
   const CatalogPage({super.key});
 
@@ -15,17 +16,41 @@ class CatalogPage extends StatefulWidget {
   State<CatalogPage> createState() => _CatalogPageState();
 }
 
-class _CatalogPageState extends State<CatalogPage> {
+class _CatalogPageState extends State<CatalogPage>
+    with SingleTickerProviderStateMixin {
   final _userStore = UserSpecStore();
+  final _searchController = TextEditingController();
   List<HardwareSpec> _userSpecs = [];
+  String _query = '';
 
   // 预置库的品类顺序（即各 Tab 的顺序）。
   static const _categories = ['CPU', '显卡', '主板', '内存', '硬盘'];
 
+  // 搜索结果的品类展示顺序（含用户自定义可能用到的品类）。
+  static const _searchCategories = [
+    'CPU', '显卡', '主板', '内存', '硬盘', '电源', '机箱', '其他',
+  ];
+
+  late final TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: _categories.length + 1, vsync: this);
+    _searchController.addListener(_onQueryChanged);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged() {
+    if (!mounted) return;
+    setState(() => _query = _searchController.text);
   }
 
   Future<void> _load() async {
@@ -51,28 +76,110 @@ class _CatalogPageState extends State<CatalogPage> {
     if (saved == true) _load();
   }
 
+  bool get _searching => _query.trim().isNotEmpty;
+
+  List<HardwareSpec> get _searchResults {
+    final all = [...kHardwareCatalog, ..._userSpecs];
+    return all.where((s) => hardwareMatches(s, _query)).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: _categories.length + 1, // +1 是「我的添加」
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('硬件库'),
-          bottom: TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [
-              const Tab(text: '我的添加'),
-              for (final c in _categories) Tab(text: c),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('硬件库')),
+      body: Column(
+        children: [
+          _searchBar(),
+          if (_searching)
+            Expanded(child: _buildSearchResults())
+          else ...[
+            TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              tabs: [
+                const Tab(text: '我的添加'),
+                for (final c in _categories) Tab(text: c),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildMineTab(),
+                  for (final c in _categories) _buildCategoryTab(c),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _searchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: '搜索型号 / 品牌，如 i5、RTX 4070、Intel',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _searching
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  tooltip: '清空',
+                  onPressed: _searchController.clear,
+                )
+              : null,
+          border: const OutlineInputBorder(),
+          isDense: true,
         ),
-        body: TabBarView(
+      ),
+    );
+  }
+
+  Widget _buildSearchResults() {
+    final results = _searchResults;
+    if (results.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _buildMineTab(),
-            for (final c in _categories) _buildCategoryTab(c),
+            const Icon(Icons.search_off, size: 48, color: Colors.grey),
+            const SizedBox(height: 8),
+            Text('没有找到「${_query.trim()}」相关的型号'),
           ],
         ),
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        for (final category in _searchCategories)
+          ..._searchSection(category, results),
+      ],
+    );
+  }
+
+  List<Widget> _searchSection(String category, List<HardwareSpec> results) {
+    final list = results.where((s) => s.category == category).toList();
+    if (list.isEmpty) return const [];
+    return [
+      _sectionHeader(category),
+      for (final s in list) _specCard(context, s),
+    ];
+  }
+
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
       ),
     );
   }
@@ -109,6 +216,7 @@ class _CatalogPageState extends State<CatalogPage> {
 
   Widget _buildCategoryTab(String category) {
     final specs = kHardwareCatalog.where((s) => s.category == category).toList();
+    final sections = _brandSections(category, specs);
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
@@ -120,9 +228,28 @@ class _CatalogPageState extends State<CatalogPage> {
               ?.copyWith(color: Colors.grey),
         ),
         const SizedBox(height: 8),
-        for (final s in specs) _specCard(context, s),
+        for (final sec in sections) ...[
+          _sectionHeader(sec.brand),
+          for (final s in sec.specs) _specCard(context, s),
+        ],
       ],
     );
+  }
+
+  /// 按品牌把某品类的型号分组：主流品牌在前（按 kBrandGroups 顺序），其余归「其它」。
+  List<({String brand, List<HardwareSpec> specs})> _brandSections(
+      String category, List<HardwareSpec> specs) {
+    final mains = kBrandGroups[category] ?? const <String>[];
+    final order = [...mains, '其它'];
+    final sections = <({String brand, List<HardwareSpec> specs})>[];
+    for (final brand in order) {
+      final list = specs
+          .where((s) => brandGroupOf(category, s.brand) == brand)
+          .toList()
+        ..sort((a, b) => a.model.compareTo(b.model));
+      if (list.isNotEmpty) sections.add((brand: brand, specs: list));
+    }
+    return sections;
   }
 
   Widget _emptyMine(BuildContext context) {

@@ -81,7 +81,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
               decoration: InputDecoration(
                 labelText: '品类',
                 helperText: _categoryLocked ? '已锁定为当前分类' : null,
-                border: const OutlineInputBorder(),
+                border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
               ),
               items: _categories
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
@@ -96,7 +96,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
               decoration: const InputDecoration(
                 labelText: '型号 *',
                 hintText: '例如：i5-13600KF',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
               ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? '请填写型号' : null,
@@ -107,7 +107,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
               decoration: const InputDecoration(
                 labelText: '品牌',
                 hintText: '例如：Intel / 华硕',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
               ),
             ),
             const SizedBox(height: 16),
@@ -118,7 +118,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
               decoration: const InputDecoration(
                 labelText: '价格（元）*',
                 hintText: '例如：1399',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
               ),
               validator: (v) {
                 final t = v?.trim() ?? '';
@@ -133,7 +133,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
               initialValue: _platform,
               decoration: const InputDecoration(
                 labelText: '购买平台',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
               ),
               items: _platforms
                   .map((p) => DropdownMenuItem(value: p, child: Text(p)))
@@ -146,7 +146,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
               decoration: const InputDecoration(
                 labelText: '参数备注',
                 hintText: '例如：LGA1700 / DDR5',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
               ),
             ),
             const SizedBox(height: 32),

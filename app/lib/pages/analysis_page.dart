@@ -176,7 +176,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               decoration: const InputDecoration(
                 labelText: '分析项目',
                 prefixIcon: Icon(Icons.tune),
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 isDense: true,
               ),
               items: [
@@ -350,12 +350,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  _isPower ? '${_fmt(v.index)}W' : v.index.toStringAsFixed(1),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: theme.colorScheme.primary,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  transitionBuilder: (child, anim) =>
+                      FadeTransition(opacity: anim, child: child),
+                  child: Text(
+                    _isPower ? '${_fmt(v.index)}W' : v.index.toStringAsFixed(1),
+                    key: ValueKey(v.index),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
                 ),
                 Text(
@@ -501,7 +507,7 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
                 decoration: InputDecoration(
                   labelText: widget.item.scoreLabel,
                   isDense: true,
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.check, size: 18),
                     tooltip: '保存',

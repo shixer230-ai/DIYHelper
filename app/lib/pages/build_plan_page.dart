@@ -393,11 +393,17 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
           children: [
             Text('总金额', style: theme.textTheme.bodyMedium?.copyWith(color: onColor)),
             const SizedBox(height: 4),
-            Text(
-              '¥${_fmt(total)}',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: onColor,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: Text(
+                '¥${_fmt(total)}',
+                key: ValueKey(total),
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: onColor,
+                ),
               ),
             ),
             const SizedBox(height: 4),
@@ -560,7 +566,7 @@ class _PowerEditorState extends State<_PowerEditor> {
                 labelText: '自定义整机功耗（可选）',
                 hintText: auto == null ? '如：550' : '不低于 ${_fmt(auto)} W',
                 helperText: '仅计算cpu+显卡功耗（用户自定义除外）',
-                border: const OutlineInputBorder(),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 isDense: true,
                 suffixIcon: IconButton(
                   onPressed: () => _submit(_c.text),

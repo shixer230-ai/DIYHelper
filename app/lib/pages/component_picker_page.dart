@@ -29,14 +29,49 @@ class ComponentPickerPage extends StatefulWidget {
 class _ComponentPickerPageState extends State<ComponentPickerPage> {
   final _store = HardwareStore();
   final _userStore = UserSpecStore();
+  final _searchController = TextEditingController();
   List<HardwareItem> _items = [];
   List<HardwareSpec> _library = [];
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_onQueryChanged);
     _load();
   }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged() {
+    if (!mounted) return;
+    setState(() => _query = _searchController.text);
+  }
+
+  bool get _searching => _query.trim().isNotEmpty;
+
+  /// 清单条目（HardwareItem）的关键词匹配：型号 / 品牌 / 平台 / 备注。
+  bool _itemMatches(HardwareItem item, String query) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return false;
+    if (item.model.toLowerCase().contains(q)) return true;
+    if (item.brand.toLowerCase().contains(q)) return true;
+    if (item.platform.toLowerCase().contains(q)) return true;
+    if (item.spec.toLowerCase().contains(q)) return true;
+    return false;
+  }
+
+  List<HardwareSpec> get _visibleLibrary => _searching
+      ? _library.where((s) => hardwareMatches(s, _query)).toList()
+      : _library;
+
+  List<HardwareItem> get _visibleItems => _searching
+      ? _items.where((i) => _itemMatches(i, _query)).toList()
+      : _items;
 
   Future<void> _load() async {
     final allItems = await _store.loadAll();
@@ -135,20 +170,10 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
             ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(12),
+      body: Column(
         children: [
-          _sectionTitle(theme, '从硬件库选'),
-          if (_library.isEmpty)
-            _emptyHint(theme, '硬件库里还没有「${widget.category}」')
-          else
-            for (final spec in _library) _specCard(theme, spec),
-          const SizedBox(height: 8),
-          _sectionTitle(theme, '从我的清单选'),
-          if (_items.isEmpty)
-            _emptyHint(theme, '清单里还没有「${widget.category}」')
-          else
-            for (final item in _items) _itemCard(theme, item),
+          _searchBar(),
+          Expanded(child: _searching ? _searchList(theme) : _allList(theme)),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -164,6 +189,77 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _searchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: '搜索型号 / 品牌，如 i5、RTX 4070',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _searching
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  tooltip: '清空',
+                  onPressed: _searchController.clear,
+                )
+              : null,
+          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+          isDense: true,
+        ),
+      ),
+    );
+  }
+
+  Widget _allList(ThemeData theme) {
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        _sectionTitle(theme, '从硬件库选'),
+        if (_library.isEmpty)
+          _emptyHint(theme, '硬件库里还没有「${widget.category}」')
+        else
+          for (final spec in _library) _specCard(theme, spec),
+        const SizedBox(height: 8),
+        _sectionTitle(theme, '从我的清单选'),
+        if (_items.isEmpty)
+          _emptyHint(theme, '清单里还没有「${widget.category}」')
+        else
+          for (final item in _items) _itemCard(theme, item),
+      ],
+    );
+  }
+
+  Widget _searchList(ThemeData theme) {
+    final lib = _visibleLibrary;
+    final items = _visibleItems;
+    if (lib.isEmpty && items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.search_off, size: 48, color: Colors.grey),
+            const SizedBox(height: 8),
+            Text('没有找到「${_query.trim()}」相关的配件'),
+          ],
+        ),
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        if (lib.isNotEmpty) ...[
+          _sectionTitle(theme, '硬件库'),
+          for (final spec in lib) _specCard(theme, spec),
+        ],
+        if (items.isNotEmpty) ...[
+          _sectionTitle(theme, '我的清单'),
+          for (final item in items) _itemCard(theme, item),
+        ],
+      ],
     );
   }
 

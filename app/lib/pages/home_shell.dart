@@ -4,8 +4,9 @@ import 'analysis_page.dart';
 import 'build_plan_page.dart';
 import 'catalog_page.dart';
 import 'hardware_list_page.dart';
+import 'settings_page.dart';
 
-/// 底部导航壳：清单 / 整机方案 / 硬件库 / 分析。
+/// 底部导航壳：清单 / 整机方案 / 硬件库 / 分析 / 设置。
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -27,9 +28,10 @@ class _HomeShellState extends State<HomeShell> {
       const BuildPlanPage(),
       const CatalogPage(),
       const AnalysisPage(),
+      const SettingsPage(),
     ];
     return Scaffold(
-      body: pages[_index],
+      body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
@@ -52,6 +54,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.insights_outlined),
             selectedIcon: Icon(Icons.insights),
             label: '分析',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: '设置',
           ),
         ],
       ),

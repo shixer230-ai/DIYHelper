@@ -132,7 +132,7 @@ class _CatalogPageState extends State<CatalogPage>
                   onPressed: _searchController.clear,
                 )
               : null,
-          border: const OutlineInputBorder(),
+          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
           isDense: true,
         ),
       ),

@@ -1,0 +1,16 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:diy_helper/main.dart';
+
+void main() {
+  testWidgets('清单页空状态冒烟测试', (WidgetTester tester) async {
+    // 用内存 mock 替代真实的本地存储，避免测试环境缺插件报错。
+    SharedPreferences.setMockInitialValues({});
+
+    await tester.pumpWidget(const DiyHelperApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('还没有硬件记录'), findsOneWidget);
+  });
+}

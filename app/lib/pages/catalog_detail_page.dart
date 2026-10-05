@@ -1,0 +1,222 @@
+import 'package:flutter/material.dart';
+
+import '../models/hardware_item.dart';
+import '../models/hardware_spec.dart';
+import '../storage/hardware_store.dart';
+import '../utils/category_icons.dart';
+
+const _platforms = ['京东', '淘宝', '拼多多', '天猫', '其他'];
+
+/// 硬件型号详情：参数规格 + 跑分，可加入我的清单。
+class CatalogDetailPage extends StatefulWidget {
+  const CatalogDetailPage({super.key, required this.spec});
+
+  final HardwareSpec spec;
+
+  @override
+  State<CatalogDetailPage> createState() => _CatalogDetailPageState();
+}
+
+class _CatalogDetailPageState extends State<CatalogDetailPage> {
+  final _store = HardwareStore();
+
+  Future<void> _addToList() async {
+    final result = await showDialog<(double, String)>(
+      context: context,
+      builder: (context) => _AddPriceDialog(spec: widget.spec),
+    );
+    if (result == null) return;
+    final (price, platform) = result;
+
+    final item = HardwareItem(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      category: widget.spec.category,
+      brand: widget.spec.brand,
+      model: widget.spec.model,
+      price: price,
+      platform: platform,
+      spec: widget.spec.summary(),
+      createdAt: DateTime.now(),
+    );
+    await _store.add(item);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已加入清单：${widget.spec.model}')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spec = widget.spec;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(spec.model)),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(
+                  categoryIcon(spec.category),
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      spec.model,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${spec.brand} · ${spec.category}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _sectionTitle(theme, '参数规格'),
+          ...spec.specs.map((e) => _entryRow(theme, e)),
+          const SizedBox(height: 20),
+          _sectionTitle(theme, '跑分'),
+          ...spec.benchmarks.map((e) => _entryRow(theme, e, emphasize: true)),
+          const SizedBox(height: 12),
+          Text(
+            '注：跑分为参考值（约），随平台、驱动版本、测试环境不同会有差异。',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: _addToList,
+            icon: const Icon(Icons.add),
+            label: const Text('加入我的清单'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(ThemeData theme, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        title,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: theme.colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _entryRow(ThemeData theme, SpecEntry e, {bool emphasize = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(e.label, style: theme.textTheme.bodyMedium),
+          Text(
+            e.value,
+            style: emphasize
+                ? TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  )
+                : theme.textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 加入清单时填写价格和平台的对话框。
+class _AddPriceDialog extends StatefulWidget {
+  const _AddPriceDialog({required this.spec});
+
+  final HardwareSpec spec;
+
+  @override
+  State<_AddPriceDialog> createState() => _AddPriceDialogState();
+}
+
+class _AddPriceDialogState extends State<_AddPriceDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _priceController = TextEditingController();
+  String _platform = _platforms.first;
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    final price = double.parse(_priceController.text.trim());
+    Navigator.pop(context, (price, _platform));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('加入清单：${widget.spec.model}'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _priceController,
+              autofocus: true,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: '价格（元）*',
+                hintText: '例如：1399',
+              ),
+              validator: (v) {
+                final t = v?.trim() ?? '';
+                if (t.isEmpty) return '请填写价格';
+                final n = double.tryParse(t);
+                if (n == null || n <= 0) return '价格格式不对';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _platform,
+              decoration: const InputDecoration(labelText: '购买平台'),
+              items: _platforms
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                  .toList(),
+              onChanged: (v) => setState(() => _platform = v!),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('加入')),
+      ],
+    );
+  }
+}

@@ -25,4 +25,38 @@ class HardwareSpec {
 
   /// 紧凑规格摘要，用于「加入清单」时的参数备注。
   String summary() => specs.map((e) => e.value).take(4).join(' · ');
+
+  factory HardwareSpec.fromJson(Map<String, dynamic> json) {
+    return HardwareSpec(
+      id: json['id'] as String,
+      category: json['category'] as String,
+      brand: (json['brand'] as String?) ?? '',
+      model: json['model'] as String,
+      specs: (json['specs'] as List? ?? [])
+          .map((e) => SpecEntry(
+                (e as Map)['label'] as String,
+                e['value'] as String,
+              ))
+          .toList(),
+      benchmarks: (json['benchmarks'] as List? ?? [])
+          .map((e) => SpecEntry(
+                (e as Map)['label'] as String,
+                e['value'] as String,
+              ))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'category': category,
+      'brand': brand,
+      'model': model,
+      'specs': specs.map((e) => {'label': e.label, 'value': e.value}).toList(),
+      'benchmarks': benchmarks
+          .map((e) => {'label': e.label, 'value': e.value})
+          .toList(),
+    };
+  }
 }

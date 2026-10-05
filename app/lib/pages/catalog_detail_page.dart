@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/hardware_item.dart';
 import '../models/hardware_spec.dart';
 import '../storage/hardware_store.dart';
+import '../storage/user_spec_store.dart';
 import '../utils/category_icons.dart';
 
 const _platforms = ['京东', '淘宝', '拼多多', '天猫', '其他'];
@@ -19,6 +20,34 @@ class CatalogDetailPage extends StatefulWidget {
 
 class _CatalogDetailPageState extends State<CatalogDetailPage> {
   final _store = HardwareStore();
+  final _userStore = UserSpecStore();
+  bool _inMine = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMineState();
+  }
+
+  Future<void> _loadMineState() async {
+    final inMine = await _userStore.contains(widget.spec.id);
+    if (!mounted) return;
+    setState(() => _inMine = inMine);
+  }
+
+  Future<void> _toggleMine() async {
+    final added = !_inMine;
+    if (added) {
+      await _userStore.add(widget.spec);
+    } else {
+      await _userStore.remove(widget.spec.id);
+    }
+    if (!mounted) return;
+    setState(() => _inMine = added);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(added ? '已加入「我的添加」' : '已从「我的添加」移除')),
+    );
+  }
 
   Future<void> _addToList() async {
     final result = await showDialog<(double, String)>(
@@ -88,20 +117,33 @@ class _CatalogDetailPageState extends State<CatalogDetailPage> {
           const SizedBox(height: 20),
           _sectionTitle(theme, '参数规格'),
           ...spec.specs.map((e) => _entryRow(theme, e)),
-          const SizedBox(height: 20),
-          _sectionTitle(theme, '跑分'),
-          ...spec.benchmarks.map((e) => _entryRow(theme, e, emphasize: true)),
-          const SizedBox(height: 12),
-          Text(
-            '注：跑分为参考值（约），随平台、驱动版本、测试环境不同会有差异。',
-            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-          ),
+          if (spec.benchmarks.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            _sectionTitle(theme, '跑分'),
+            ...spec.benchmarks.map((e) => _entryRow(theme, e, emphasize: true)),
+            const SizedBox(height: 12),
+            Text(
+              '注：跑分为参考值（约），随平台、驱动版本、测试环境不同会有差异。',
+              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+            ),
+          ],
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: _addToList,
             icon: const Icon(Icons.add),
             label: const Text('加入我的清单'),
             style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _toggleMine,
+            icon: Icon(
+              _inMine ? Icons.bookmark_remove : Icons.bookmark_add_outlined,
+            ),
+            label: Text(_inMine ? '从「我的添加」移除' : '加入「我的添加」'),
+            style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
             ),
           ),

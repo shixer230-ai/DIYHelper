@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'pages/hardware_list_page.dart';
+import 'pages/home_shell.dart';
 
 void main() {
   runApp(const DiyHelperApp());
@@ -17,7 +17,7 @@ class DiyHelperApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2962FF)),
       ),
-      home: const HardwareListPage(),
+      home: const HomeShell(),
     );
   }
 }

@@ -32,6 +32,12 @@ class HardwareStore {
     await saveAll(items);
   }
 
+  Future<void> addAll(List<HardwareItem> newItems) async {
+    final items = await loadAll();
+    items.addAll(newItems);
+    await saveAll(items);
+  }
+
   Future<void> delete(String id) async {
     final items = await loadAll();
     items.removeWhere((e) => e.id == id);

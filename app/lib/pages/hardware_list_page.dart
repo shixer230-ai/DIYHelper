@@ -80,13 +80,6 @@ class _HardwareListPageState extends State<HardwareListPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu_book),
-            tooltip: '硬件库',
-            onPressed: _openCatalog,
-          ),
-        ],
       ),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
@@ -111,7 +104,7 @@ class _HardwareListPageState extends State<HardwareListPage> {
             const Text('还没有硬件记录'),
             const SizedBox(height: 4),
             const Text(
-              '点右上角「硬件库」选型号，或点 + 自定义添加',
+              '去「硬件库」选型号，或点 + 自定义添加',
               style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
             const SizedBox(height: 12),

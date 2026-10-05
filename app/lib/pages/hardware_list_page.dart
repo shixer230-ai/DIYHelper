@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/hardware_item.dart';
+import '../storage/build_plan_store.dart';
 import '../storage/hardware_store.dart';
 import '../utils/category_icons.dart';
 import 'catalog_page.dart';
@@ -8,7 +9,10 @@ import 'hardware_form_page.dart';
 
 /// 硬件清单主页：展示已录入的硬件，可新增、删除，也可进入硬件库选型号。
 class HardwareListPage extends StatefulWidget {
-  const HardwareListPage({super.key});
+  const HardwareListPage({super.key, this.onOpenPlan});
+
+  /// 点击整机方案条目时回调，用于切换到「整机方案」标签页。
+  final VoidCallback? onOpenPlan;
 
   @override
   State<HardwareListPage> createState() => _HardwareListPageState();
@@ -49,6 +53,13 @@ class _HardwareListPageState extends State<HardwareListPage> {
     );
     // 从硬件库返回后刷新，把刚加入的型号显示出来。
     _load();
+  }
+
+  Future<void> _openPlan(HardwareItem item) async {
+    final id = item.planId;
+    if (id == null) return;
+    await BuildPlanStore().saveCurrentId(id);
+    widget.onOpenPlan?.call();
   }
 
   Future<void> _confirmDelete(HardwareItem item) async {
@@ -125,6 +136,7 @@ class _HardwareListPageState extends State<HardwareListPage> {
         return _HardwareCard(
           item: item,
           onDelete: () => _confirmDelete(item),
+          onTap: item.planId != null ? () => _openPlan(item) : null,
         );
       },
     );
@@ -132,10 +144,15 @@ class _HardwareListPageState extends State<HardwareListPage> {
 }
 
 class _HardwareCard extends StatelessWidget {
-  const _HardwareCard({required this.item, required this.onDelete});
+  const _HardwareCard({
+    required this.item,
+    required this.onDelete,
+    this.onTap,
+  });
 
   final HardwareItem item;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   String _formatPrice(double p) {
     return p == p.roundToDouble() ? p.toStringAsFixed(0) : p.toStringAsFixed(2);
@@ -146,71 +163,77 @@ class _HardwareCard extends StatelessWidget {
     final theme = Theme.of(context);
     final subtitle = [
       if (item.brand.isNotEmpty) item.brand,
-      item.platform,
+      if (item.platform.isNotEmpty) item.platform,
       if (item.spec.isNotEmpty) item.spec,
     ].join(' · ');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: Icon(
-                categoryIcon(item.category),
-                color: theme.colorScheme.onPrimaryContainer,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(
+                  categoryIcon(item.category),
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.model,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.planId != null ? '${item.category} · 点击查看方案' : item.category,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    item.model,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
+                    '¥${_formatPrice(item.price)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
                       fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.category,
-                    style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.primary,
                     ),
                   ),
+                  IconButton(
+                    onPressed: onDelete,
+                    tooltip: '删除',
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                  ),
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '¥${_formatPrice(item.price)}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                IconButton(
-                  onPressed: onDelete,
-                  tooltip: '删除',
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                ),
-              ],
-            ),
-          ],
+              if (onTap != null)
+                const Icon(Icons.chevron_right, color: Colors.grey),
+            ],
+          ),
         ),
       ),
     );

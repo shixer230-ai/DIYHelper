@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'analysis_page.dart';
 import 'build_plan_page.dart';
 import 'catalog_page.dart';
 import 'hardware_list_page.dart';
 
-/// 底部导航壳：清单 / 整机方案 / 硬件库。
+/// 底部导航壳：清单 / 整机方案 / 硬件库 / 分析。
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -15,16 +16,20 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  static const _pages = [
-    HardwareListPage(),
-    BuildPlanPage(),
-    CatalogPage(),
-  ];
+  void _openPlanTab() {
+    setState(() => _index = 1);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      HardwareListPage(onOpenPlan: _openPlanTab),
+      const BuildPlanPage(),
+      const CatalogPage(),
+      const AnalysisPage(),
+    ];
     return Scaffold(
-      body: _pages[_index],
+      body: pages[_index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
@@ -42,6 +47,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
             label: '硬件库',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon: Icon(Icons.insights),
+            label: '分析',
           ),
         ],
       ),

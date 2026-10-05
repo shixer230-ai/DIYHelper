@@ -17,6 +17,8 @@ IconData categoryIcon(String category) {
       return Icons.power;
     case '机箱':
       return Icons.dns;
+    case '整机方案':
+      return Icons.computer;
     default:
       return Icons.devices_other;
   }

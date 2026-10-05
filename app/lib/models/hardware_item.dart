@@ -7,6 +7,7 @@ class HardwareItem {
   final double price; // 价格（元）
   final String platform; // 购买平台：京东 / 淘宝 ...
   final String spec; // 参数备注，可留空
+  final String? planId; // 关联的整机方案 id（仅「整机方案」品类有值）
   final DateTime createdAt;
 
   const HardwareItem({
@@ -17,6 +18,7 @@ class HardwareItem {
     required this.price,
     required this.platform,
     required this.spec,
+    this.planId,
     required this.createdAt,
   });
 
@@ -29,6 +31,7 @@ class HardwareItem {
       price: (json['price'] as num).toDouble(),
       platform: json['platform'] as String,
       spec: (json['spec'] as String?) ?? '',
+      planId: json['planId'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt'] as int),
     );
   }
@@ -42,6 +45,7 @@ class HardwareItem {
       'price': price,
       'platform': platform,
       'spec': spec,
+      if (planId != null) 'planId': planId,
       'createdAt': createdAt.millisecondsSinceEpoch,
     };
   }

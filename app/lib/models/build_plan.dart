@@ -36,11 +36,21 @@ class PlanComponent {
 }
 
 /// 整机方案：按槽位（cpu/gpu/主板/内存/硬盘/电源/机箱）存放已选配件。
+/// 每个方案有自己的 id 和名称，可保存多个。
 class BuildPlan {
+  final String id;
+  final String name;
   final Map<String, PlanComponent> components;
 
-  BuildPlan({Map<String, PlanComponent>? components})
-      : components = components ?? {};
+  BuildPlan({
+    String? id,
+    this.name = '',
+    Map<String, PlanComponent>? components,
+  })  : id = id ?? newId(),
+        components = components ?? {};
+
+  /// 生成一个不重复的方案 id。
+  static String newId() => 'plan_${DateTime.now().microsecondsSinceEpoch}';
 
   PlanComponent? operator [](String key) => components[key];
 
@@ -55,15 +65,24 @@ class BuildPlan {
   /// 已选配件的总金额。
   double get total => components.values.fold(0, (s, c) => s + c.price);
 
+  /// 已选配件数。
+  int get filledCount => components.length;
+
   factory BuildPlan.fromJson(Map<String, dynamic> json) {
     final comps = (json['components'] as Map<String, dynamic>? ?? {}).map(
       (k, v) => MapEntry(k, PlanComponent.fromJson(v as Map<String, dynamic>)),
     );
-    return BuildPlan(components: comps);
+    return BuildPlan(
+      id: json['id'] as String?,
+      name: (json['name'] as String?) ?? '',
+      components: comps,
+    );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
+      'name': name,
       'components': components.map((k, v) => MapEntry(k, v.toJson())),
     };
   }

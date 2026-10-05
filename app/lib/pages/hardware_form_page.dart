@@ -8,7 +8,10 @@ const _platforms = ['京东', '淘宝', '拼多多', '天猫', '其他'];
 
 /// 录入 / 编辑一件硬件的表单页。
 class HardwareFormPage extends StatefulWidget {
-  const HardwareFormPage({super.key});
+  const HardwareFormPage({super.key, this.category});
+
+  /// 从清单页某个品类 Tab 进入时传入，锁定品类不可改；为空则允许自由选择。
+  final String? category;
 
   @override
   State<HardwareFormPage> createState() => _HardwareFormPageState();
@@ -25,6 +28,15 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
   String _category = _categories.first;
   String _platform = _platforms.first;
   bool _saving = false;
+
+  /// 品类是否锁定（从清单页某个品类进入时锁定，避免把 CPU 误记成显卡）。
+  bool get _categoryLocked => widget.category != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _category = widget.category ?? _categories.first;
+  }
 
   @override
   void dispose() {
@@ -56,7 +68,9 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('录入硬件')),
+      appBar: AppBar(
+        title: Text(_categoryLocked ? '录入 $_category' : '录入硬件'),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -64,14 +78,17 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
           children: [
             DropdownButtonFormField<String>(
               initialValue: _category,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: '品类',
-                border: OutlineInputBorder(),
+                helperText: _categoryLocked ? '已锁定为当前分类' : null,
+                border: const OutlineInputBorder(),
               ),
               items: _categories
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                   .toList(),
-              onChanged: (v) => setState(() => _category = v!),
+              onChanged: _categoryLocked
+                  ? null
+                  : (v) => setState(() => _category = v!),
             ),
             const SizedBox(height: 16),
             TextFormField(

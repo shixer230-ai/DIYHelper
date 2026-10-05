@@ -57,22 +57,25 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
+  /// 是否为「整机功耗」这类数值越小越好的整机指标。
+  bool get _isPower => _item.category == '整机';
+
   Widget _selector(ThemeData theme) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: DropdownButtonFormField<ValueItem>(
+        initialValue: _item,
+        decoration: const InputDecoration(
+          labelText: '分析项目',
+          prefixIcon: Icon(Icons.tune),
+          border: OutlineInputBorder(),
+          isDense: true,
+        ),
+        items: [
           for (final item in kValueItems)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(item.label),
-                selected: _item == item,
-                onSelected: (_) => setState(() => _item = item),
-              ),
-            ),
+            DropdownMenuItem(value: item, child: Text(item.label)),
         ],
+        onChanged: (v) => setState(() => _item = v!),
       ),
     );
   }
@@ -91,7 +94,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              '另有 $skipped 个方案未上榜（缺少「${_item.category}」或型号未匹配）',
+              _isPower
+                  ? '另有 $skipped 个方案未上榜（功耗数据未匹配）'
+                  : '另有 $skipped 个方案未上榜（缺少「${_item.category}」或型号未匹配）',
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
             ),
           ),
@@ -114,7 +119,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
           Text(
             _plans.isEmpty
                 ? '先去「整机方案」建一个方案，并选好 CPU / 显卡'
-                : '所选「${_item.label}」下，方案里缺少对应部件或型号未匹配到硬件库',
+                : _isPower
+                    ? '所选「整机功耗」下，方案里配件的功耗数据未匹配到硬件库'
+                    : '所选「${_item.label}」下，方案里缺少对应部件或型号未匹配到硬件库',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
           ),
@@ -155,7 +162,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${v.partModel} · ${_item.label} ${_fmt(v.bench)}',
+                    _isPower
+                        ? '整机功耗 ${_fmt(v.bench)}W'
+                        : '${v.partModel} · ${_item.label} ${_fmt(v.bench)}',
                     style: theme.textTheme.bodySmall,
                   ),
                   const SizedBox(height: 2),
@@ -170,7 +179,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  v.index.toStringAsFixed(1),
+                  _isPower ? '${_fmt(v.index)}W' : v.index.toStringAsFixed(1),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
@@ -178,7 +187,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   ),
                 ),
                 Text(
-                  '性价比指数',
+                  _isPower ? '整机功耗' : '性价比指数',
                   style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey),
                 ),
               ],

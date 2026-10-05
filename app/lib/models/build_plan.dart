@@ -42,10 +42,14 @@ class BuildPlan {
   final String name;
   final Map<String, PlanComponent> components;
 
+  /// 用户自定义的整机功耗（W）。为空时分析页自动按 CPU+显卡 计算。
+  final double? customPower;
+
   BuildPlan({
     String? id,
     this.name = '',
     Map<String, PlanComponent>? components,
+    this.customPower,
   })  : id = id ?? newId(),
         components = components ?? {};
 
@@ -76,6 +80,7 @@ class BuildPlan {
       id: json['id'] as String?,
       name: (json['name'] as String?) ?? '',
       components: comps,
+      customPower: (json['customPower'] as num?)?.toDouble(),
     );
   }
 
@@ -84,6 +89,7 @@ class BuildPlan {
       'id': id,
       'name': name,
       'components': components.map((k, v) => MapEntry(k, v.toJson())),
+      'customPower': customPower,
     };
   }
 }

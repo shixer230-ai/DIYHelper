@@ -26,6 +26,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
   final List<_EntryPair> _specPairs = [];
   final List<_EntryPair> _benchPairs = [];
   final Map<String, TextEditingController> _valueControllers = {};
+  final _powerController = TextEditingController();
 
   /// 当前品类参与「分析」排行的性价比项目。
   List<ValueItem> get _valueItems =>
@@ -46,6 +47,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
   void dispose() {
     _brandController.dispose();
     _modelController.dispose();
+    _powerController.dispose();
     for (final p in _specPairs) {
       p.dispose();
     }
@@ -75,6 +77,21 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     return result;
   }
 
+  /// 功耗写入规格里的条目名：CPU 用「默认TDP」、显卡用「功耗」，其它品类无。
+  String? get _powerLabel {
+    if (_category == 'CPU') return '默认TDP';
+    if (_category == '显卡') return '功耗';
+    return null;
+  }
+
+  /// 收集功耗：填了才写入，label 用分析约定的精确名。
+  List<SpecEntry> _collectPower() {
+    final label = _powerLabel;
+    final text = _powerController.text.trim();
+    if (label == null || text.isEmpty) return [];
+    return [SpecEntry(label, text)];
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final spec = HardwareSpec(
@@ -82,7 +99,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
       category: _category,
       brand: _brandController.text.trim(),
       model: _modelController.text.trim(),
-      specs: _collect(_specPairs),
+      specs: [..._collect(_specPairs), ..._collectPower()],
       benchmarks: [..._collect(_benchPairs), ..._collectValueBenches()],
     );
     setState(() => _saving = true);
@@ -146,6 +163,10 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
             if (_valueItems.isNotEmpty) ...[
               const SizedBox(height: 24),
               _valueBenchEditor(),
+            ],
+            if (_powerLabel != null) ...[
+              const SizedBox(height: 24),
+              _powerEditor(),
             ],
             const SizedBox(height: 32),
             FilledButton(
@@ -267,6 +288,37 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  /// 功耗：CPU/显卡 填了才能参与「分析」的整机功耗排行（可跳过）。
+  Widget _powerEditor() {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '功耗（用于「分析」整机功耗排行）',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        Text(
+          '填了功耗，这个型号就能参与「分析」页的整机功耗排行；不填可跳过。',
+          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _powerController,
+          decoration: const InputDecoration(
+            labelText: '功耗',
+            hintText: '如：65W / 450W',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
       ],
     );
   }

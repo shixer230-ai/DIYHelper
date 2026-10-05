@@ -17,7 +17,8 @@ class HardwareListPage extends StatefulWidget {
   State<HardwareListPage> createState() => _HardwareListPageState();
 }
 
-class _HardwareListPageState extends State<HardwareListPage> {
+class _HardwareListPageState extends State<HardwareListPage>
+    with SingleTickerProviderStateMixin {
   final _store = HardwareStore();
   List<HardwareItem> _items = [];
   bool _loading = true;
@@ -27,10 +28,26 @@ class _HardwareListPageState extends State<HardwareListPage> {
     '整机方案', 'CPU', '显卡', '主板', '内存', '硬盘', '电源', '机箱', '其他',
   ];
 
+  late final TabController _tabController;
+  int _currentIndex = 0;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: _categories.length, vsync: this);
+    _tabController.addListener(_onTabChanged);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (!mounted || _tabController.index == _currentIndex) return;
+    setState(() => _currentIndex = _tabController.index);
   }
 
   Future<void> _load() async {
@@ -42,10 +59,10 @@ class _HardwareListPageState extends State<HardwareListPage> {
     });
   }
 
-  Future<void> _openForm() async {
+  Future<void> _openForm(String category) async {
     final saved = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const HardwareFormPage()),
+      MaterialPageRoute(builder: (_) => HardwareFormPage(category: category)),
     );
     if (saved == true) _load();
   }
@@ -83,30 +100,33 @@ class _HardwareListPageState extends State<HardwareListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: _categories.length,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            _items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）',
-          ),
-          bottom: TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [for (final c in _categories) Tab(text: c)],
-          ),
+    final currentCategory = _categories[_currentIndex];
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          _items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）',
         ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : TabBarView(
-                children: [for (final c in _categories) _categoryTab(c)],
-              ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _openForm,
-          tooltip: '自定义添加',
-          child: const Icon(Icons.add),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          tabs: [for (final c in _categories) Tab(text: c)],
         ),
       ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [for (final c in _categories) _categoryTab(c)],
+            ),
+      // 「整机方案」由整机方案页生成，不能手动添加，故隐藏右下角 +。
+      floatingActionButton: currentCategory == '整机方案'
+          ? null
+          : FloatingActionButton(
+              onPressed: () => _openForm(currentCategory),
+              tooltip: '自定义添加',
+              child: const Icon(Icons.add),
+            ),
     );
   }
 

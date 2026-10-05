@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../analysis/value_index.dart';
+import '../data/hardware_catalog.dart';
 import '../models/build_plan.dart';
 import '../models/hardware_item.dart';
+import '../models/hardware_spec.dart';
 import '../storage/build_plan_store.dart';
 import '../storage/hardware_store.dart';
+import '../storage/user_spec_store.dart';
 import '../utils/category_icons.dart';
 import 'component_picker_page.dart';
 
@@ -41,6 +45,9 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
   String? _currentId;
   bool _loading = true;
 
+  // 硬件库（预置 + 我的添加），用于计算默认的 CPU+显卡 功耗。
+  List<HardwareSpec> _library = [];
+
   BuildPlan? get _current {
     for (final p in _plans) {
       if (p.id == _currentId) return p;
@@ -57,10 +64,12 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
   Future<void> _load() async {
     final plans = await _store.loadAll();
     final currentId = await _store.loadCurrentId();
+    final userSpecs = await UserSpecStore().loadAll();
     if (!mounted) return;
     setState(() {
       _plans = plans;
       _currentId = currentId;
+      _library = [...kHardwareCatalog, ...userSpecs];
       _loading = false;
     });
   }
@@ -133,6 +142,7 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
       id: plan.id,
       name: plan.name,
       components: Map.of(plan.components),
+      customPower: plan.customPower,
     );
     updated.set(slot.key, result.$1 ? null : result.$2);
     setState(() => _replace(plan.id, updated));
@@ -256,6 +266,29 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  /// 自动的 CPU+显卡 功耗（匹配不到返回 null）。
+  double? _autoPower(BuildPlan plan) => totalPower(plan, _library);
+
+  Widget _powerCard(BuildPlan plan) {
+    return _PowerEditor(
+      plan: plan,
+      autoPower: _autoPower(plan),
+      onSave: (v) => _savePower(plan, v),
+    );
+  }
+
+  Future<void> _savePower(BuildPlan plan, double? value) async {
+    final updated = BuildPlan(
+      id: plan.id,
+      name: plan.name,
+      components: plan.components,
+      customPower: value,
+    );
+    setState(() => _replace(plan.id, updated));
+    await _store.saveAll(_plans);
+    _snack(value == null ? '已清空自定义功耗' : '已设置整机功耗 ${_fmt(value)} W');
+  }
+
   void _replace(String id, BuildPlan updated) {
     final i = _plans.indexWhere((p) => p.id == id);
     if (i >= 0) _plans[i] = updated;
@@ -335,6 +368,8 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
           '显卡、机箱为可选（用核显可不加显卡）；其余为必选。',
           style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
         ),
+        const SizedBox(height: 12),
+        _powerCard(plan),
         const SizedBox(height: 16),
         FilledButton.icon(
           onPressed: plan.components.isEmpty ? null : _saveToItems,
@@ -424,6 +459,122 @@ String _nextName(List<BuildPlan> plans) {
 
 String _fmt(double p) =>
     p == p.roundToDouble() ? p.toStringAsFixed(0) : p.toStringAsFixed(2);
+
+/// 整机功耗编辑器：显示自动计算的 CPU+显卡 功耗，允许用户自定义（不低于自动值）。
+class _PowerEditor extends StatefulWidget {
+  const _PowerEditor({
+    required this.plan,
+    required this.autoPower,
+    required this.onSave,
+  });
+
+  final BuildPlan plan;
+  final double? autoPower;
+  final Future<void> Function(double? value) onSave;
+
+  @override
+  State<_PowerEditor> createState() => _PowerEditorState();
+}
+
+class _PowerEditorState extends State<_PowerEditor> {
+  late final TextEditingController _c = TextEditingController(
+    text: widget.plan.customPower == null ? '' : _fmt(widget.plan.customPower!),
+  );
+
+  @override
+  void didUpdateWidget(covariant _PowerEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.plan.id != widget.plan.id) {
+      _c.text = widget.plan.customPower == null
+          ? ''
+          : _fmt(widget.plan.customPower!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit(String raw) async {
+    final t = raw.trim();
+    double? value;
+    if (t.isEmpty) {
+      value = null;
+    } else {
+      value = double.tryParse(t);
+      if (value == null || value <= 0) {
+        _toast('功耗格式不对，请输入数字（W）');
+        return;
+      }
+      final auto = widget.autoPower;
+      if (auto != null && value < auto) {
+        _toast('自定义功耗不能低于 CPU+显卡功耗 ${_fmt(auto)} W');
+        return;
+      }
+    }
+    await widget.onSave(value);
+  }
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final auto = widget.autoPower;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.bolt, size: 20, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  '整机功耗',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              auto == null
+                  ? '自动计算：CPU+显卡 功耗未匹配到硬件库'
+                  : '自动计算：CPU+显卡 约 ${_fmt(auto)} W',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _c,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              onSubmitted: _submit,
+              decoration: InputDecoration(
+                labelText: '自定义整机功耗（可选）',
+                hintText: auto == null ? '如：550' : '不低于 ${_fmt(auto)} W',
+                helperText: '仅计算cpu+显卡功耗（用户自定义除外）',
+                border: const OutlineInputBorder(),
+                isDense: true,
+                suffixIcon: IconButton(
+                  onPressed: () => _submit(_c.text),
+                  tooltip: '保存功耗',
+                  icon: const Icon(Icons.check),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// 输入方案名称的对话框，返回名称（非空）。
 class _NameDialog extends StatefulWidget {
@@ -527,7 +678,12 @@ class _PlansSheetState extends State<_PlansSheet> {
     if (name == null) return;
     setState(() {
       final i = _plans.indexWhere((p) => p.id == plan.id);
-      _plans[i] = BuildPlan(id: plan.id, name: name, components: plan.components);
+      _plans[i] = BuildPlan(
+        id: plan.id,
+        name: name,
+        components: plan.components,
+        customPower: plan.customPower,
+      );
     });
     await _store.saveAll(_plans);
   }

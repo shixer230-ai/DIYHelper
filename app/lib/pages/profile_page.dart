@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../app_info.dart';
 import '../storage/background_image_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
@@ -57,7 +58,7 @@ class ProfilePage extends StatelessWidget {
               _appearanceCard(theme),
               const SizedBox(height: 16),
               _sectionTitle(theme, '关于'),
-              _aboutCard(),
+              _aboutCard(context, theme),
             ],
           );
         },
@@ -233,19 +234,75 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _aboutCard() {
-    return const Card(
+  Widget _aboutCard(BuildContext context, ThemeData theme) {
+    return Card(
       child: Column(
         children: [
           ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('版本'),
-            trailing: Text('v1.7.0'),
+            leading: const Icon(Icons.info_outline),
+            title: const Text('版本'),
+            trailing: Text(kAppVersion),
           ),
           ListTile(
+            leading: const Icon(Icons.receipt_long_outlined),
+            title: const Text('版本更新日志'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showVersionLog(context),
+          ),
+          const ListTile(
             leading: Icon(Icons.widgets_outlined),
             title: Text('DIY 硬件性价比助手'),
             subtitle: Text('帮你从 CPU / 显卡到整机方案，挑出最划算的配置。'),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '© $kCredit',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showVersionLog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('版本更新日志'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final entry in kVersionLog) ...[
+                Text(
+                  entry.version,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                for (final item in entry.items)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, left: 4),
+                    child: Text('· $item'),
+                  ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('知道了'),
           ),
         ],
       ),

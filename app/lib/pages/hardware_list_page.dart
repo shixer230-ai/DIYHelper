@@ -9,10 +9,13 @@ import 'hardware_form_page.dart';
 
 /// 硬件清单主页：展示已录入的硬件，可新增、删除，也可进入硬件库选型号。
 class HardwareListPage extends StatefulWidget {
-  const HardwareListPage({super.key, this.onOpenPlan});
+  const HardwareListPage({super.key, this.onOpenPlan, this.isActive = true});
 
   /// 点击整机方案条目时回调，用于切换到「整机方案」标签页。
   final VoidCallback? onOpenPlan;
+
+  /// 当前是否为底部导航选中的标签页；从其他页切回来时用于刷新数据。
+  final bool isActive;
 
   @override
   State<HardwareListPage> createState() => _HardwareListPageState();
@@ -52,6 +55,13 @@ class _HardwareListPageState extends State<HardwareListPage>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant HardwareListPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 从其他标签页切回来时重新加载，确保能看到在整机方案页里保存的条目。
+    if (widget.isActive && !oldWidget.isActive) _load();
   }
 
   void _onTabChanged() {

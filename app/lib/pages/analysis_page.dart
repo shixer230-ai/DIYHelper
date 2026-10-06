@@ -13,7 +13,10 @@ import 'custom_item_form_page.dart';
 
 /// 分析页：按所选「性价比项目」（内置跑分/功耗 + 自定义项目）给整机方案排行。
 class AnalysisPage extends StatefulWidget {
-  const AnalysisPage({super.key});
+  const AnalysisPage({super.key, this.isActive = true});
+
+  /// 当前是否为底部导航选中的标签页；切回来时用于刷新方案数据。
+  final bool isActive;
 
   @override
   State<AnalysisPage> createState() => _AnalysisPageState();
@@ -35,6 +38,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant AnalysisPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 从其他标签页切回来时刷新方案/配件数据，避免排行滞后。
+    if (widget.isActive && !oldWidget.isActive) _load();
   }
 
   Future<void> _load() async {

@@ -28,10 +28,10 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HardwareListPage(onOpenPlan: _openPlanTab),
-      const BuildPlanPage(),
+      HardwareListPage(onOpenPlan: _openPlanTab, isActive: _index == 0),
+      BuildPlanPage(isActive: _index == 1),
       const CatalogPage(),
-      const AnalysisPage(),
+      AnalysisPage(isActive: _index == 3),
       const ProfilePage(),
     ];
     return Scaffold(

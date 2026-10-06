@@ -1,17 +1,20 @@
-# diy_helper
+# DIYHelper —— DIY 硬件性价比助手
 
-A new Flutter project.
+一个帮你从 CPU / 显卡到整机方案，挑出最划算配置的安卓 App。
 
-## Getting Started
+## 版本
 
-This project is a starting point for a Flutter application.
+**1.0.0 Beta**
 
-A few resources to get you started if this is your first Flutter project:
+## 主要功能
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- 手工录入价格/型号，本地保存硬件清单
+- 硬件库：CPU / 显卡 / 主板 / 内存 / 硬盘 等预置参考型号与跑分
+- 整机方案：多方案管理、一键保存到清单、按跑分算性价比并排行
+- 个性化：主题色、自定义背景、深浅色、昵称
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 设计与创作
+
+CreativeDesign ZkeRurQwQ · 蓝色大肥鱼Accomplish
+
+> 版权署名，请勿盗用。

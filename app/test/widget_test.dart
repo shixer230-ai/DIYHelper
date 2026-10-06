@@ -12,6 +12,6 @@ void main() {
     await tester.pumpAndSettle();
 
     // 清单页现在按品类分 Tab，空态时首个 Tab（整机方案）显示空提示。
-    expect(find.text('还没有「整机方案」的记录'), findsOneWidget);
+    expect(find.text('还没有整机方案'), findsOneWidget);
   });
 }

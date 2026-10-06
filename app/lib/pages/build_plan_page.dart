@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../analysis/compat_check.dart';
 import '../analysis/value_index.dart';
 import '../data/hardware_catalog.dart';
 import '../models/build_plan.dart';
@@ -35,7 +36,10 @@ const kBuildSlots = [
 
 /// 整机方案：支持多个方案（新建/切换/重命名/删除），按槽位选配件自动汇总总金额。
 class BuildPlanPage extends StatefulWidget {
-  const BuildPlanPage({super.key});
+  const BuildPlanPage({super.key, this.isActive = true});
+
+  /// 当前是否为底部导航选中的标签页；从清单页点方案切过来时用于刷新当前方案。
+  final bool isActive;
 
   @override
   State<BuildPlanPage> createState() => _BuildPlanPageState();
@@ -61,6 +65,13 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant BuildPlanPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 从清单页点某个方案跳过来时，重新读取当前方案 id。
+    if (widget.isActive && !oldWidget.isActive) _load();
   }
 
   Future<void> _load() async {
@@ -368,6 +379,7 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
       ),
       children: [
         _totalCard(theme, filled, plan.total),
+        _compatCard(theme, plan),
         const SizedBox(height: 4),
         for (final slot in kBuildSlots) _slotCard(theme, slot, plan),
         const SizedBox(height: 8),
@@ -419,6 +431,57 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
               '已选 $filled / ${kBuildSlots.length} 项',
               style: theme.textTheme.bodySmall?.copyWith(color: onColor),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 兼容性提醒：黄色感叹号卡片，有隐患才显示（只提醒、不阻断保存）。
+  Widget _compatCard(ThemeData theme, BuildPlan plan) {
+    final issues = checkCompatibility(plan, _library);
+    if (issues.isEmpty) return const SizedBox.shrink();
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      color: Colors.amber.withValues(alpha: 0.12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.amber.withValues(alpha: 0.6)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.warning_amber, color: Colors.amber, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  '兼容性提醒',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            for (final issue in issues)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• ', style: TextStyle(color: Colors.amber)),
+                    Expanded(
+                      child: Text(
+                        issue.message,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

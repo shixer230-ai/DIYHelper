@@ -1,3 +1,8 @@
+// DIYHelper —— DIY 硬件性价比助手
+// 版本：1.0.0 Beta
+// 设计与创作：CreativeDesign ZkeRurQwQ · 蓝色大肥鱼Accomplish
+// 版权署名，请勿盗用。
+
 import 'dart:io';
 import 'dart:ui';
 

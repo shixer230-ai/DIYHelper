@@ -367,37 +367,10 @@ class ProfilePage extends StatelessWidget {
   }
 
   void _showVersionLog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('版本更新日志'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final entry in kVersionLog) ...[
-                Text(
-                  entry.version,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                for (final item in entry.items)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2, left: 4),
-                    child: Text('· $item'),
-                  ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('知道了'),
-          ),
-        ],
-      ),
+    // 不再用弹窗，直接进入一个整页展示，阅读更舒服。
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const _VersionLogPage()),
     );
   }
 
@@ -432,6 +405,46 @@ class ProfilePage extends StatelessWidget {
           : null,
       selected: selected,
       onTap: () => ThemeController.instance.setMode(value),
+    );
+  }
+}
+
+/// 版本更新日志整页：按版本分组展示，最新在前。
+class _VersionLogPage extends StatelessWidget {
+  const _VersionLogPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: const Text('版本更新日志')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          for (final entry in kVersionLog) ...[
+            Text(
+              entry.version,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final item in entry.items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6, left: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('· '),
+                    Expanded(child: Text(item)),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 20),
+          ],
+        ],
+      ),
     );
   }
 }

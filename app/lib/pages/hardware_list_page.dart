@@ -130,31 +130,30 @@ class _HardwareListPageState extends State<HardwareListPage>
         MediaQuery.paddingOf(context).top + kToolbarHeight + kTextTabBarHeight;
     return Scaffold(
       // 内容延伸到标题栏下方、标题栏悬浮其上（与底部导航栏逻辑一致），
-      // 标题栏用磨砂玻璃，不再是一块遮住主题内容的不透明白色。
+      // 标题栏全透明，不再遮挡主题内容。
       extendBodyBehindAppBar: true,
-      appBar: GlassAppBar(
-        child: AppBar(
-          backgroundColor: scheme.surface.withValues(alpha: 0.6),
-          title: Text(_items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）'),
-          bottom: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
-            indicatorSize: TabBarIndicatorSize.tab,
-            indicatorPadding: const EdgeInsets.symmetric(
-              horizontal: 4,
-              vertical: 8,
-            ),
-            indicator: BoxDecoration(
-              color: scheme.primaryContainer.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            labelColor: scheme.onPrimaryContainer,
-            unselectedLabelColor: scheme.onSurfaceVariant,
-            dividerColor: Colors.transparent,
-            tabs: [for (final c in _categories) Tab(text: c)],
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: Text(_items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）'),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicatorPadding: const EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: 8,
           ),
+          indicator: BoxDecoration(
+            // 选中分类的主题色块：胶囊形 + 半透明主题色（和右下角 + 按钮风格一致）。
+            color: scheme.primary.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          labelColor: scheme.primary,
+          unselectedLabelColor: scheme.onSurfaceVariant,
+          dividerColor: Colors.transparent,
+          tabs: [for (final c in _categories) Tab(text: c)],
         ),
       ),
       body: _loading

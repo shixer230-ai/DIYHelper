@@ -448,19 +448,8 @@ class _BuildPlanPageState extends State<BuildPlanPage>
           onPressed: plan.components.isEmpty ? null : _saveToItems,
           icon: const Icon(Icons.save_alt),
           label: const Text('保存到我的清单'),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-            // 与卡片一致：胶囊圆角 + 半透明底色。
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(kCardRadius),
-            ),
-            backgroundColor: theme.colorScheme.surface.withValues(alpha: 0.5),
-            foregroundColor: theme.colorScheme.primary,
-            disabledBackgroundColor:
-                theme.colorScheme.surface.withValues(alpha: 0.3),
-            disabledForegroundColor:
-                theme.colorScheme.onSurface.withValues(alpha: 0.4),
-          ),
+          // 与「加入我的清单」等主按钮统一：胶囊圆角 + 半透明底色。
+          style: capsuleButtonStyle(theme),
         ),
       ],
     );

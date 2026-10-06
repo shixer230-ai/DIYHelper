@@ -132,7 +132,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
                 labelText: '品类',
                 helperText: _categoryLocked ? '已锁定为当前分类' : null,
                 border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
               ),
               items: _categories
@@ -149,7 +149,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
                 labelText: '型号 *',
                 hintText: '例如：i5-13600KF',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
               ),
               validator: (v) =>
@@ -162,7 +162,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
                 labelText: '品牌',
                 hintText: '例如：Intel / 华硕',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
               ),
             ),
@@ -175,7 +175,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
                 labelText: '价格（元）*',
                 hintText: '例如：1399',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
               ),
               validator: (v) {
@@ -193,7 +193,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
               decoration: const InputDecoration(
                 labelText: '购买平台',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
               ),
               items: _platforms
@@ -208,7 +208,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
                 labelText: '参数备注',
                 hintText: '例如：LGA1700 / DDR5',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
               ),
             ),
@@ -229,6 +229,11 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
               onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
+                // 半透明胶囊保存按钮，和全站玻璃/胶囊风格保持一致。
+                backgroundColor:
+                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.16),
+                foregroundColor: Theme.of(context).colorScheme.primary,
+                shape: const StadiumBorder(),
               ),
               child: const Text('保存'),
             ),
@@ -265,7 +270,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
                 labelText: item.label,
                 hintText: '如：约 10500',
                 border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
                 isDense: true,
               ),

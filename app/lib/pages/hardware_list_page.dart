@@ -11,7 +11,7 @@ import 'hardware_form_page.dart';
 class HardwareListPage extends StatefulWidget {
   const HardwareListPage({super.key, this.onOpenPlan, this.isActive = true});
 
-  /// 点击整机方案条目时回调，用于切换到「整机方案」标签页。
+  /// 点击整机方案条目时回调，用于切换到顶部「整机方案」分段。
   final VoidCallback? onOpenPlan;
 
   /// 当前是否为底部导航选中的标签页；从其他页切回来时用于刷新数据。
@@ -123,36 +123,45 @@ class _HardwareListPageState extends State<HardwareListPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final scheme = Theme.of(context).colorScheme;
     final currentCategory = _categories[_currentIndex];
+    // 标题栏总高度（状态栏 + 工具栏 + 分类 TabBar），内容预留顶部间距以延伸到标题栏下方。
+    final topInset =
+        MediaQuery.paddingOf(context).top + kToolbarHeight + kTextTabBarHeight;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）'),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
-          indicatorSize: TabBarIndicatorSize.tab,
-          indicatorPadding: const EdgeInsets.symmetric(
-            horizontal: 4,
-            vertical: 8,
+      // 内容延伸到标题栏下方、标题栏悬浮其上（与底部导航栏逻辑一致），
+      // 标题栏用磨砂玻璃，不再是一块遮住主题内容的不透明白色。
+      extendBodyBehindAppBar: true,
+      appBar: GlassAppBar(
+        child: AppBar(
+          backgroundColor: scheme.surface.withValues(alpha: 0.6),
+          title: Text(_items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）'),
+          bottom: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicatorPadding: const EdgeInsets.symmetric(
+              horizontal: 4,
+              vertical: 8,
+            ),
+            indicator: BoxDecoration(
+              color: scheme.primaryContainer.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            labelColor: scheme.onPrimaryContainer,
+            unselectedLabelColor: scheme.onSurfaceVariant,
+            dividerColor: Colors.transparent,
+            tabs: [for (final c in _categories) Tab(text: c)],
           ),
-          indicator: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer
-                .withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          labelColor: Theme.of(context).colorScheme.onPrimaryContainer,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
-          dividerColor: Colors.transparent,
-          tabs: [for (final c in _categories) Tab(text: c)],
         ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
               controller: _tabController,
-              children: [for (final c in _categories) _categoryTab(c)],
+              children: [for (final c in _categories) _categoryTab(c, topInset)],
             ),
       // 「整机方案」由整机方案页生成，不能手动添加，故隐藏右下角 +。
       floatingActionButton: currentCategory == '整机方案'
@@ -161,6 +170,10 @@ class _HardwareListPageState extends State<HardwareListPage>
               // 底部导航悬浮在内容上方，FAB 也要上移导航高度，避免被导航遮住。
               padding: EdgeInsets.only(bottom: kNavOverlaySpace),
               child: FloatingActionButton(
+                shape: const CircleBorder(),
+                // 半透明材质，和保存按钮 / 玻璃风格一致。
+                backgroundColor: scheme.primary.withValues(alpha: 0.16),
+                foregroundColor: scheme.primary,
                 onPressed: () => _openForm(currentCategory),
                 tooltip: '自定义添加',
                 child: const Icon(Icons.add),
@@ -169,13 +182,13 @@ class _HardwareListPageState extends State<HardwareListPage>
     );
   }
 
-  Widget _categoryTab(String category) {
+  Widget _categoryTab(String category, double topInset) {
     final items = _items.where((e) => e.category == category).toList();
-    if (items.isEmpty) return _emptyCategory(category);
+    if (items.isEmpty) return _emptyCategory(category, topInset);
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(
         12,
-        12,
+        topInset + 12,
         12,
         12 + bottomNavClearance(context),
       ),
@@ -191,33 +204,31 @@ class _HardwareListPageState extends State<HardwareListPage>
     );
   }
 
-  Widget _emptyCategory(String category) {
+  Widget _emptyCategory(String category, double topInset) {
     final isPlan = category == '整机方案';
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            categoryIcon(category),
-            size: 48,
-            color: categoryColor(category),
-          ),
-          const SizedBox(height: 8),
-          Text(isPlan ? '还没有整机方案' : '还没有「$category」的记录'),
-          const SizedBox(height: 4),
-          Text(
-            isPlan ? '整机方案要去「整机方案」页里创建' : '可去「硬件库」选型号，或点右下角 + 添加',
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
-          ),
-          if (isPlan) ...[
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () => widget.onOpenPlan?.call(),
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text('去整机方案'),
-            ),
-          ],
-        ],
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          categoryIcon(category),
+          size: 48,
+          color: categoryColor(category),
+        ),
+        const SizedBox(height: 8),
+        Text(isPlan ? '还没有整机方案' : '还没有「$category」的记录'),
+        const SizedBox(height: 4),
+        Text(
+          isPlan ? '在顶部「整机方案」里创建后会自动出现在这里' : '可去「硬件库」选型号，或点右下角 + 添加',
+          style: const TextStyle(color: Colors.grey, fontSize: 12),
+        ),
+      ],
+    );
+    // 所有分类（含整机方案）空状态都上移，避免和右下角 + 挤在一起。
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: EdgeInsets.only(top: topInset + 96),
+        child: content,
       ),
     );
   }

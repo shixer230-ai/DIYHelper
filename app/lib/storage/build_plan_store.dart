@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/build_plan.dart';
+import '../utils/json_safe.dart';
 
 /// 保存多个「整机方案」以及当前选中的方案 id。
 class BuildPlanStore {
@@ -14,21 +15,21 @@ class BuildPlanStore {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_plansKey);
     if (raw != null && raw.isNotEmpty) {
-      return (jsonDecode(raw) as List)
-          .map((e) => BuildPlan.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return decodeMapList(raw).map((e) => BuildPlan.fromJson(e)).toList();
     }
     // 迁移旧版单个方案（key = build_plan）。
     final legacy = prefs.getString(_legacyKey);
     if (legacy != null && legacy.isNotEmpty) {
-      final old =
-          BuildPlan.fromJson(jsonDecode(legacy) as Map<String, dynamic>);
-      final migrated = [
-        BuildPlan(id: old.id, name: '方案 1', components: old.components),
-      ];
-      await prefs.remove(_legacyKey);
-      await saveAll(migrated);
-      return migrated;
+      final oldJson = decodeMap(legacy);
+      if (oldJson != null) {
+        final old = BuildPlan.fromJson(oldJson);
+        final migrated = [
+          BuildPlan(id: old.id, name: '方案 1', components: old.components),
+        ];
+        await prefs.remove(_legacyKey);
+        await saveAll(migrated);
+        return migrated;
+      }
     }
     return [];
   }

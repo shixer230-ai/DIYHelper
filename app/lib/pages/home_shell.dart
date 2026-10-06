@@ -1,16 +1,13 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_bottom_navbar_plus/liquid_glass_bottom_navbar_plus.dart';
 
-import '../theme/app_theme.dart';
 import 'analysis_page.dart';
-import 'build_plan_page.dart';
 import 'catalog_page.dart';
-import 'hardware_list_page.dart';
+import 'list_plan_page.dart';
 import 'profile_page.dart';
 
-/// 底部导航壳：清单 / 整机方案 / 硬件库 / 分析 / 设置。
+/// 底部导航壳：清单 / 硬件库 / 分析 / 我的。
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -20,104 +17,57 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
-  late final PageController _pageController;
 
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  /// 切换标签页：更新选中态并播放滑动动画。
+  /// 切换标签页：直接切换。之前用淡入过渡会让 body 短暂变透明，导致底部导航
+  /// 玻璃背后的内容「闪现」成非玻璃的空白背景，故改为无过渡的即时切换。
   void _switchTo(int i) {
     if (i == _index) return;
     setState(() => _index = i);
-    _pageController.animateToPage(
-      i,
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
-    );
   }
-
-  void _openPlanTab() => _switchTo(1);
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final pages = [
-      HardwareListPage(onOpenPlan: _openPlanTab, isActive: _index == 0),
-      BuildPlanPage(isActive: _index == 1),
+      ListPlanPage(isActive: _index == 0),
       const CatalogPage(),
-      AnalysisPage(isActive: _index == 3),
+      AnalysisPage(isActive: _index == 2),
       const ProfilePage(),
     ];
     return Scaffold(
       // 让页面内容延伸到导航栏下方，导航栏悬浮在内容之上。
       extendBody: true,
-      body: PageView(
-        controller: _pageController,
-        // 只通过底部导航切换（带滑动动画），禁用手势避免与页面内 TabBarView 冲突。
-        physics: const NeverScrollableScrollPhysics(),
-        children: pages,
-      ),
-      bottomNavigationBar: Container(
+      body: IndexedStack(index: _index, children: pages),
+      // 底部导航：iOS 26 液态玻璃材质（真实折射 + 跟手滑动），对齐酷安的实现方式。
+      bottomNavigationBar: LiquidGlassBottomBar(
+        items: _kNavItems,
+        selectedIndex: _index,
+        onDestinationSelected: _switchTo,
+        height: 68,
         margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        decoration: BoxDecoration(
-          // 胶囊形：取导航条半高（kNavBarRadius=34）作为圆角。
-          borderRadius: BorderRadius.circular(kNavBarRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        // 先裁剪成胶囊，再对下方透出的内容做背景模糊，避免文字/图片与导航混在一起。
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(kNavBarRadius),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              // 半透明，和卡片透明度一致，让下方内容透出。
-              color: Theme.of(context).colorScheme.surface
-                  .withValues(alpha: 0.5),
-              child: NavigationBar(
-                selectedIndex: _index,
-                onDestinationSelected: _switchTo,
-                backgroundColor: Colors.transparent,
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(LucideIcons.clipboard_list),
-                    label: '清单',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(LucideIcons.computer),
-                    label: '整机方案',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(LucideIcons.library),
-                    label: '硬件库',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(LucideIcons.chart_bar),
-                    label: '分析',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(LucideIcons.user),
-                    label: '我的',
-                  ),
-                ],
-              ),
-            ),
+        theme: LiquidGlassBarTheme(
+          iconColor: scheme.onSurfaceVariant,
+          selectedIconColor: scheme.primary,
+          labelStyle: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
           ),
+          selectedLabelStyle: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+          pillColor: scheme.primary.withValues(alpha: 0.14),
+          showLabels: true,
         ),
       ),
     );
   }
 }
+
+/// 底部导航项：图标 + 文案（Lucide 线性图标）。
+const _kNavItems = <LiquidGlassBarItem>[
+  LiquidGlassBarItem(icon: Icon(LucideIcons.clipboard_list), label: '清单'),
+  LiquidGlassBarItem(icon: Icon(LucideIcons.library), label: '硬件库'),
+  LiquidGlassBarItem(icon: Icon(LucideIcons.chart_bar), label: '分析'),
+  LiquidGlassBarItem(icon: Icon(LucideIcons.user), label: '我的'),
+];

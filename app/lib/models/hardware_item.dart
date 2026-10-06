@@ -1,3 +1,5 @@
+import '../utils/json_safe.dart';
+
 /// 一件硬件的记录：品类、型号、品牌、价格、购买平台、参数备注。
 class HardwareItem {
   final String id;
@@ -24,15 +26,15 @@ class HardwareItem {
 
   factory HardwareItem.fromJson(Map<String, dynamic> json) {
     return HardwareItem(
-      id: json['id'] as String,
-      category: json['category'] as String,
-      brand: (json['brand'] as String?) ?? '',
-      model: json['model'] as String,
-      price: (json['price'] as num).toDouble(),
-      platform: json['platform'] as String,
-      spec: (json['spec'] as String?) ?? '',
-      planId: json['planId'] as String?,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt'] as int),
+      id: asString(json['id']),
+      category: asString(json['category']),
+      brand: asString(json['brand']),
+      model: asString(json['model']),
+      price: asDouble(json['price']),
+      platform: asString(json['platform']),
+      spec: asString(json['spec']),
+      planId: asNullableString(json['planId']),
+      createdAt: asDate(json['createdAt']),
     );
   }
 

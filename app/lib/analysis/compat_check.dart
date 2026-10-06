@@ -9,7 +9,8 @@ class CompatIssue {
   final String message;
 }
 
-/// 检查整机方案的兼容性问题：CPU↔主板插槽、内存类型↔主板内存支持。
+/// 检查整机方案的兼容性问题：CPU↔主板插槽、内存类型↔主板内存支持、
+/// 电源额定功率↔整机功耗。
 /// 只做「能确定」的判断；匹配不到硬件库型号的配件跳过（不误报）。
 List<CompatIssue> checkCompatibility(BuildPlan plan, List<HardwareSpec> lib) {
   final issues = <CompatIssue>[];
@@ -30,6 +31,16 @@ List<CompatIssue> checkCompatibility(BuildPlan plan, List<HardwareSpec> lib) {
   final mbMem = _memType(_specValue(mbSpec, '内存支持'));
   if (ramType != null && mbMem != null && ramType != mbMem) {
     issues.add(CompatIssue('内存是 $ramType，但主板支持 $mbMem，不兼容'));
+  }
+
+  // 3) 电源额定功率 vs 整机功耗（只累加 CPU TDP + 显卡功耗，属偏保守的提醒）。
+  final psuSpec = _lookup(plan['psu'], '电源', lib);
+  final psuPowerRaw = _specValue(psuSpec, '额定功率');
+  final psuPower = psuPowerRaw == null ? null : parseBench(psuPowerRaw);
+  final sysPower = totalPower(plan, lib);
+  if (psuPower != null && sysPower != null && psuPower < sysPower) {
+    issues.add(CompatIssue(
+        '整机功耗约 ${sysPower.toStringAsFixed(0)}W，但电源额定功率仅 ${psuPower.toStringAsFixed(0)}W，可能不够'));
   }
 
   return issues;

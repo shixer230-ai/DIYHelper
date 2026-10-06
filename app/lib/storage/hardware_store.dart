@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/hardware_item.dart';
+import '../utils/json_safe.dart';
 
 /// 用手机本地存储保存硬件清单（当前阶段不接服务器）。
 class HardwareStore {
@@ -12,9 +13,8 @@ class HardwareStore {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
     if (raw == null || raw.isEmpty) return [];
-    final list = (jsonDecode(raw) as List)
-        .map((e) => HardwareItem.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final list =
+        decodeMapList(raw).map((e) => HardwareItem.fromJson(e)).toList();
     // 按录入时间倒序，最新在前
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;

@@ -1,3 +1,5 @@
+import '../utils/json_safe.dart';
+
 /// 一条参数 / 跑分条目：名称 + 值。
 class SpecEntry {
   final String label;
@@ -28,21 +30,17 @@ class HardwareSpec {
 
   factory HardwareSpec.fromJson(Map<String, dynamic> json) {
     return HardwareSpec(
-      id: json['id'] as String,
-      category: json['category'] as String,
-      brand: (json['brand'] as String?) ?? '',
-      model: json['model'] as String,
-      specs: (json['specs'] as List? ?? [])
-          .map((e) => SpecEntry(
-                (e as Map)['label'] as String,
-                e['value'] as String,
-              ))
+      id: asString(json['id']),
+      category: asString(json['category']),
+      brand: asString(json['brand']),
+      model: asString(json['model']),
+      specs: asList(json['specs'])
+          .whereType<Map>()
+          .map((e) => SpecEntry(asString(e['label']), asString(e['value'])))
           .toList(),
-      benchmarks: (json['benchmarks'] as List? ?? [])
-          .map((e) => SpecEntry(
-                (e as Map)['label'] as String,
-                e['value'] as String,
-              ))
+      benchmarks: asList(json['benchmarks'])
+          .whereType<Map>()
+          .map((e) => SpecEntry(asString(e['label']), asString(e['value'])))
           .toList(),
     );
   }

@@ -1,3 +1,5 @@
+import '../utils/json_safe.dart';
+
 /// 整机方案里的一个配件（含价格）。
 class PlanComponent {
   final String category;
@@ -16,11 +18,11 @@ class PlanComponent {
 
   factory PlanComponent.fromJson(Map<String, dynamic> json) {
     return PlanComponent(
-      category: json['category'] as String,
-      brand: (json['brand'] as String?) ?? '',
-      model: json['model'] as String,
-      price: (json['price'] as num).toDouble(),
-      platform: (json['platform'] as String?) ?? '',
+      category: asString(json['category']),
+      brand: asString(json['brand']),
+      model: asString(json['model']),
+      price: asDouble(json['price']),
+      platform: asString(json['platform']),
     );
   }
 
@@ -73,14 +75,17 @@ class BuildPlan {
   int get filledCount => components.length;
 
   factory BuildPlan.fromJson(Map<String, dynamic> json) {
-    final comps = (json['components'] as Map<String, dynamic>? ?? {}).map(
-      (k, v) => MapEntry(k, PlanComponent.fromJson(v as Map<String, dynamic>)),
-    );
+    final comps = <String, PlanComponent>{};
+    asStringMap(json['components']).forEach((k, v) {
+      if (v is Map) {
+        comps[k] = PlanComponent.fromJson(Map<String, dynamic>.from(v));
+      }
+    });
     return BuildPlan(
-      id: json['id'] as String?,
-      name: (json['name'] as String?) ?? '',
+      id: asNullableString(json['id']),
+      name: asString(json['name']),
       components: comps,
-      customPower: (json['customPower'] as num?)?.toDouble(),
+      customPower: asNullableDouble(json['customPower']),
     );
   }
 

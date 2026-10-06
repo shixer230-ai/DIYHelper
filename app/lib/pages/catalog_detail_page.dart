@@ -4,6 +4,7 @@ import '../models/hardware_item.dart';
 import '../models/hardware_spec.dart';
 import '../storage/hardware_store.dart';
 import '../storage/user_spec_store.dart';
+import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
 
 const _platforms = ['京东', '淘宝', '拼多多', '天猫', '其他'];
@@ -126,9 +127,7 @@ class _CatalogDetailPageState extends State<CatalogDetailPage> {
             onPressed: _addToList,
             icon: const Icon(Icons.add),
             label: const Text('加入我的清单'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-            ),
+            style: capsuleButtonStyle(theme),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(

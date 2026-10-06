@@ -1,3 +1,5 @@
+import '../utils/json_safe.dart';
+
 /// 分析模块里的「自定义项目」：给整机方案手工打分后按分数排行。
 ///
 /// 分三类：
@@ -44,14 +46,16 @@ class CustomItem {
   }
 
   factory CustomItem.fromJson(Map<String, dynamic> json) {
+    final scores = <String, double>{};
+    asStringMap(json['scores']).forEach((k, v) {
+      scores[k] = asDouble(v);
+    });
     return CustomItem(
-      id: json['id'] as String,
-      category: json['category'] as String,
-      name: json['name'] as String,
-      description: (json['description'] as String?) ?? '',
-      scores: (json['scores'] as Map? ?? {}).map(
-        (k, v) => MapEntry(k as String, (v as num).toDouble()),
-      ),
+      id: asNullableString(json['id']),
+      category: asString(json['category']),
+      name: asString(json['name']),
+      description: asString(json['description']),
+      scores: scores,
     );
   }
 

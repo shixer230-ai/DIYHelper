@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/hardware_spec.dart';
+import '../utils/json_safe.dart';
 
 /// 保存硬件库中「我的添加」专栏里的型号（自定义 + 从预置库收藏）。
 class UserSpecStore {
@@ -12,9 +13,7 @@ class UserSpecStore {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
     if (raw == null || raw.isEmpty) return [];
-    return (jsonDecode(raw) as List)
-        .map((e) => HardwareSpec.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return decodeMapList(raw).map((e) => HardwareSpec.fromJson(e)).toList();
   }
 
   Future<void> saveAll(List<HardwareSpec> specs) async {

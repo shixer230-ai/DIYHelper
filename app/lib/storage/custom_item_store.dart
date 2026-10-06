@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/custom_item.dart';
+import '../utils/json_safe.dart';
 
 /// 保存「分析」模块的自定义项目。
 class CustomItemStore {
@@ -12,9 +13,7 @@ class CustomItemStore {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
     if (raw == null || raw.isEmpty) return [];
-    return (jsonDecode(raw) as List)
-        .map((e) => CustomItem.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return decodeMapList(raw).map((e) => CustomItem.fromJson(e)).toList();
   }
 
   Future<void> saveAll(List<CustomItem> items) async {

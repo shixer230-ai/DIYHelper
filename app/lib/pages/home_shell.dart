@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
@@ -39,8 +41,6 @@ class _HomeShellState extends State<HomeShell> {
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         decoration: BoxDecoration(
-          // 半透明，和卡片透明度一致，让下方内容透出。
-          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
           // 胶囊形：取导航条半高（kNavBarRadius=34）作为圆角。
           borderRadius: BorderRadius.circular(kNavBarRadius),
           boxShadow: [
@@ -51,33 +51,44 @@ class _HomeShellState extends State<HomeShell> {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
-        child: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (i) => setState(() => _index = i),
-          backgroundColor: Colors.transparent,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(LucideIcons.clipboard_list),
-              label: '清单',
+        // 先裁剪成胶囊，再对下方透出的内容做背景模糊，避免文字/图片与导航混在一起。
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(kNavBarRadius),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              // 半透明，和卡片透明度一致，让下方内容透出。
+              color: Theme.of(context).colorScheme.surface
+                  .withValues(alpha: 0.5),
+              child: NavigationBar(
+                selectedIndex: _index,
+                onDestinationSelected: (i) => setState(() => _index = i),
+                backgroundColor: Colors.transparent,
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(LucideIcons.clipboard_list),
+                    label: '清单',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(LucideIcons.computer),
+                    label: '整机方案',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(LucideIcons.library),
+                    label: '硬件库',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(LucideIcons.chart_bar),
+                    label: '分析',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(LucideIcons.user),
+                    label: '我的',
+                  ),
+                ],
+              ),
             ),
-            NavigationDestination(
-              icon: Icon(LucideIcons.computer),
-              label: '整机方案',
-            ),
-            NavigationDestination(
-              icon: Icon(LucideIcons.library),
-              label: '硬件库',
-            ),
-            NavigationDestination(
-              icon: Icon(LucideIcons.chart_bar),
-              label: '分析',
-            ),
-            NavigationDestination(
-              icon: Icon(LucideIcons.user),
-              label: '我的',
-            ),
-          ],
+          ),
         ),
       ),
     );

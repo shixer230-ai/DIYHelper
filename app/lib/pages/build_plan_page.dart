@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../analysis/value_index.dart';
 import '../data/hardware_catalog.dart';
@@ -169,9 +170,7 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('保存到清单'),
-          content: Text(
-            '把整机方案「${_planName(plan)}」作为一个整体加入「我的硬件清单」吗？',
-          ),
+          content: Text('把整机方案「${_planName(plan)}」作为一个整体加入「我的硬件清单」吗？'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -195,9 +194,7 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('清单里已有这个方案'),
-        content: Text(
-          '清单里已经保存过「${_planName(plan)}」，要覆盖原来的条目，还是另存一份新名称的？',
-        ),
+        content: Text('清单里已经保存过「${_planName(plan)}」，要覆盖原来的条目，还是另存一份新名称的？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -330,8 +327,8 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : plan == null
-              ? _emptyState()
-              : _planBody(plan),
+          ? _emptyState()
+          : _planBody(plan),
     );
   }
 
@@ -340,7 +337,7 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.computer, size: 64, color: Colors.grey),
+          const Icon(LucideIcons.pc_case, size: 64, color: Colors.grey),
           const SizedBox(height: 12),
           const Text('还没有整机方案'),
           const SizedBox(height: 4),
@@ -363,7 +360,12 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
     final theme = Theme.of(context);
     final filled = kBuildSlots.where((s) => plan[s.key] != null).length;
     return ListView(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        12 + bottomNavClearance(context),
+      ),
       children: [
         _totalCard(theme, filled, plan.total),
         const SizedBox(height: 4),
@@ -380,9 +382,7 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
           onPressed: plan.components.isEmpty ? null : _saveToItems,
           icon: const Icon(Icons.save_alt),
           label: const Text('保存到我的清单'),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-          ),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
         ),
       ],
     );
@@ -396,7 +396,10 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Text('总金额', style: theme.textTheme.bodyMedium?.copyWith(color: onColor)),
+            Text(
+              '总金额',
+              style: theme.textTheme.bodyMedium?.copyWith(color: onColor),
+            ),
             const SizedBox(height: 4),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
@@ -433,8 +436,8 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
           comp == null
               ? '未选择'
               : comp.brand.isEmpty
-                  ? comp.model
-                  : '${comp.model} · ${comp.brand}',
+              ? comp.model
+              : '${comp.model} · ${comp.brand}',
         ),
         trailing: comp == null
             ? const Icon(Icons.chevron_right)
@@ -543,8 +546,9 @@ class _PowerEditorState extends State<_PowerEditor> {
                 const SizedBox(width: 8),
                 Text(
                   '整机功耗',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -558,14 +562,17 @@ class _PowerEditorState extends State<_PowerEditor> {
             const SizedBox(height: 12),
             TextField(
               controller: _c,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               onSubmitted: _submit,
               decoration: InputDecoration(
                 labelText: '自定义整机功耗（可选）',
                 hintText: auto == null ? '如：550' : '不低于 ${_fmt(auto)} W',
                 helperText: '仅计算cpu+显卡功耗（用户自定义除外）',
-                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
                 isDense: true,
                 suffixIcon: IconButton(
                   onPressed: () => _submit(_c.text),
@@ -593,8 +600,9 @@ class _NameDialog extends StatefulWidget {
 }
 
 class _NameDialogState extends State<_NameDialog> {
-  late final TextEditingController _c =
-      TextEditingController(text: widget.initial);
+  late final TextEditingController _c = TextEditingController(
+    text: widget.initial,
+  );
 
   @override
   void dispose() {
@@ -741,8 +749,9 @@ class _PlansSheetState extends State<_PlansSheet> {
               children: [
                 Text(
                   '我的方案',
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Spacer(),
                 TextButton.icon(
@@ -778,9 +787,7 @@ class _PlansSheetState extends State<_PlansSheet> {
     }
     return ListView(
       shrinkWrap: true,
-      children: [
-        for (final plan in _plans) _row(theme, plan),
-      ],
+      children: [for (final plan in _plans) _row(theme, plan)],
     );
   }
 
@@ -795,7 +802,11 @@ class _PlansSheetState extends State<_PlansSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (selected)
-            Icon(Icons.check_circle, color: theme.colorScheme.primary, size: 20),
+            Icon(
+              Icons.check_circle,
+              color: theme.colorScheme.primary,
+              size: 20,
+            ),
           IconButton(
             onPressed: () => _rename(plan),
             tooltip: '重命名',

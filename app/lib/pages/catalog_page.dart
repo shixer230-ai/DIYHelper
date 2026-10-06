@@ -29,7 +29,14 @@ class _CatalogPageState extends State<CatalogPage>
 
   // 搜索结果的品类展示顺序（含用户自定义可能用到的品类）。
   static const _searchCategories = [
-    'CPU', '显卡', '主板', '内存', '硬盘', '电源', '机箱', '其他',
+    'CPU',
+    '显卡',
+    '主板',
+    '内存',
+    '硬盘',
+    '电源',
+    '机箱',
+    '其他',
   ];
 
   late final TabController _tabController;
@@ -98,6 +105,22 @@ class _CatalogPageState extends State<CatalogPage>
               controller: _tabController,
               isScrollable: true,
               tabAlignment: TabAlignment.start,
+              // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicatorPadding: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 8,
+              ),
+              indicator: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer
+                    .withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              labelColor: Theme.of(context).colorScheme.onPrimaryContainer,
+              unselectedLabelColor: Theme.of(context)
+                  .colorScheme
+                  .onSurfaceVariant,
+              dividerColor: Colors.transparent,
               tabs: [
                 const Tab(text: '我的添加'),
                 for (final c in _categories) Tab(text: c),
@@ -133,7 +156,9 @@ class _CatalogPageState extends State<CatalogPage>
                   onPressed: _searchController.clear,
                 )
               : null,
-          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
           isDense: true,
         ),
       ),
@@ -155,7 +180,12 @@ class _CatalogPageState extends State<CatalogPage>
       );
     }
     return ListView(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        12 + bottomNavClearance(context),
+      ),
       children: [
         for (final category in _searchCategories)
           ..._searchSection(category, results),
@@ -178,25 +208,28 @@ class _CatalogPageState extends State<CatalogPage>
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
 
   Widget _buildMineTab() {
     return ListView(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        12 + bottomNavClearance(context),
+      ),
       children: [
         Row(
           children: [
             Expanded(
               child: Text(
                 '我的添加',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
@@ -216,16 +249,21 @@ class _CatalogPageState extends State<CatalogPage>
   }
 
   Widget _buildCategoryTab(String category) {
-    final specs = kHardwareCatalog.where((s) => s.category == category).toList();
+    final specs = kHardwareCatalog
+        .where((s) => s.category == category)
+        .toList();
     final sections = _brandSections(category, specs);
     return ListView(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        12 + bottomNavClearance(context),
+      ),
       children: [
         Text(
           '预置参考型号，跑分为约值，点击查看详情。',
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
+          style: Theme.of(context).textTheme.bodySmall
               ?.copyWith(color: Colors.grey),
         ),
         const SizedBox(height: 8),
@@ -239,15 +277,16 @@ class _CatalogPageState extends State<CatalogPage>
 
   /// 按品牌把某品类的型号分组：主流品牌在前（按 kBrandGroups 顺序），其余归「其它」。
   List<({String brand, List<HardwareSpec> specs})> _brandSections(
-      String category, List<HardwareSpec> specs) {
+    String category,
+    List<HardwareSpec> specs,
+  ) {
     final mains = kBrandGroups[category] ?? const <String>[];
     final order = [...mains, '其它'];
     final sections = <({String brand, List<HardwareSpec> specs})>[];
     for (final brand in order) {
-      final list = specs
-          .where((s) => brandGroupOf(category, s.brand) == brand)
-          .toList()
-        ..sort((a, b) => a.model.compareTo(b.model));
+      final list =
+          specs.where((s) => brandGroupOf(category, s.brand) == brand).toList()
+            ..sort((a, b) => a.model.compareTo(b.model));
       if (list.isNotEmpty) sections.add((brand: brand, specs: list));
     }
     return sections;
@@ -259,17 +298,18 @@ class _CatalogPageState extends State<CatalogPage>
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Icon(Icons.bookmark_add_outlined,
-                size: 36, color: Colors.grey),
+            const Icon(
+              Icons.bookmark_add_outlined,
+              size: 36,
+              color: Colors.grey,
+            ),
             const SizedBox(height: 8),
             const Text('还没有自定义添加的型号'),
             const SizedBox(height: 4),
             Text(
               '点「自定义添加」录入新硬件，或在预置型号详情里点「加入我的添加」收藏。',
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
+              style: Theme.of(context).textTheme.bodySmall
                   ?.copyWith(color: Colors.grey),
             ),
           ],

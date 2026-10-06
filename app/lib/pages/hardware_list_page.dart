@@ -26,7 +26,15 @@ class _HardwareListPageState extends State<HardwareListPage>
 
   // 清单分类 Tab 的顺序（可左右滑动切换）。
   static const _categories = [
-    '整机方案', 'CPU', '显卡', '主板', '内存', '硬盘', '电源', '机箱', '其他',
+    '整机方案',
+    'CPU',
+    '显卡',
+    '主板',
+    '内存',
+    '硬盘',
+    '电源',
+    '机箱',
+    '其他',
   ];
 
   late final TabController _tabController;
@@ -104,13 +112,25 @@ class _HardwareListPageState extends State<HardwareListPage>
     final currentCategory = _categories[_currentIndex];
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）',
-        ),
+        title: Text(_items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）'),
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
+          // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicatorPadding: const EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: 8,
+          ),
+          indicator: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer
+                .withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          labelColor: Theme.of(context).colorScheme.onPrimaryContainer,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+          dividerColor: Colors.transparent,
           tabs: [for (final c in _categories) Tab(text: c)],
         ),
       ),
@@ -123,10 +143,14 @@ class _HardwareListPageState extends State<HardwareListPage>
       // 「整机方案」由整机方案页生成，不能手动添加，故隐藏右下角 +。
       floatingActionButton: currentCategory == '整机方案'
           ? null
-          : FloatingActionButton(
-              onPressed: () => _openForm(currentCategory),
-              tooltip: '自定义添加',
-              child: const Icon(Icons.add),
+          : Padding(
+              // 底部导航悬浮在内容上方，FAB 也要上移导航高度，避免被导航遮住。
+              padding: EdgeInsets.only(bottom: kNavOverlaySpace),
+              child: FloatingActionButton(
+                onPressed: () => _openForm(currentCategory),
+                tooltip: '自定义添加',
+                child: const Icon(Icons.add),
+              ),
             ),
     );
   }
@@ -135,7 +159,12 @@ class _HardwareListPageState extends State<HardwareListPage>
     final items = _items.where((e) => e.category == category).toList();
     if (items.isEmpty) return _emptyCategory(category);
     return ListView.builder(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        12 + bottomNavClearance(context),
+      ),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
@@ -149,18 +178,31 @@ class _HardwareListPageState extends State<HardwareListPage>
   }
 
   Widget _emptyCategory(String category) {
+    final isPlan = category == '整机方案';
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(categoryIcon(category), size: 48, color: categoryColor(category)),
-          const SizedBox(height: 8),
-          Text('还没有「$category」的记录'),
-          const SizedBox(height: 4),
-          const Text(
-            '可去「硬件库」选型号，或点右下角 + 添加',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
+          Icon(
+            categoryIcon(category),
+            size: 48,
+            color: categoryColor(category),
           ),
+          const SizedBox(height: 8),
+          Text(isPlan ? '还没有整机方案' : '还没有「$category」的记录'),
+          const SizedBox(height: 4),
+          Text(
+            isPlan ? '整机方案要去「整机方案」页里创建' : '可去「硬件库」选型号，或点右下角 + 添加',
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+          if (isPlan) ...[
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => widget.onOpenPlan?.call(),
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('去整机方案'),
+            ),
+          ],
         ],
       ),
     );
@@ -168,11 +210,7 @@ class _HardwareListPageState extends State<HardwareListPage>
 }
 
 class _HardwareCard extends StatelessWidget {
-  const _HardwareCard({
-    required this.item,
-    required this.onDelete,
-    this.onTap,
-  });
+  const _HardwareCard({required this.item, required this.onDelete, this.onTap});
 
   final HardwareItem item;
   final VoidCallback onDelete;

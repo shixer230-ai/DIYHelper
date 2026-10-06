@@ -134,13 +134,20 @@ ThemeData _base(ColorScheme scheme, bool transparentBackground) {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
     ),
+    // 转场用透明底：FadeForwards 默认会垫一块不透明的 surface 色防止页面间露黑，
+    // 但本 app 自带全屏背景，垫上它反而会在跳转时盖住自定义背景造成「闪白」。
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.iOS: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.macOS: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.android:
+            FadeForwardsPageTransitionsBuilder(backgroundColor: Colors.transparent),
+        TargetPlatform.iOS:
+            FadeForwardsPageTransitionsBuilder(backgroundColor: Colors.transparent),
+        TargetPlatform.macOS:
+            FadeForwardsPageTransitionsBuilder(backgroundColor: Colors.transparent),
+        TargetPlatform.windows:
+            FadeForwardsPageTransitionsBuilder(backgroundColor: Colors.transparent),
+        TargetPlatform.linux:
+            FadeForwardsPageTransitionsBuilder(backgroundColor: Colors.transparent),
       },
     ),
   );

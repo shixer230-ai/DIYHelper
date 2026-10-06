@@ -173,6 +173,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
             child: DropdownButtonFormField<_Choice>(
               initialValue: _selectedChoice,
               isExpanded: true,
+              // 展开的选择菜单也做圆角，和输入框(12)一致。
+              borderRadius: BorderRadius.circular(12),
               decoration: const InputDecoration(
                 labelText: '分析项目',
                 prefixIcon: Icon(Icons.tune),
@@ -520,9 +522,9 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
       return;
     }
     final n = double.tryParse(t);
-    if (n == null || n < 0) {
+    if (n == null || n <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入有效数字')),
+        const SnackBar(content: Text('请输入大于 0 的数字')),
       );
       return;
     }

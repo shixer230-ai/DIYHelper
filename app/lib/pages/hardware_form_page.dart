@@ -78,6 +78,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
           children: [
             DropdownButtonFormField<String>(
               initialValue: _category,
+              borderRadius: BorderRadius.circular(12),
               decoration: InputDecoration(
                 labelText: '品类',
                 helperText: _categoryLocked ? '已锁定为当前分类' : null,
@@ -131,6 +132,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _platform,
+              borderRadius: BorderRadius.circular(12),
               decoration: const InputDecoration(
                 labelText: '购买平台',
                 border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),

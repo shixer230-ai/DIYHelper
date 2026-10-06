@@ -37,7 +37,8 @@ class _HomeShellState extends State<HomeShell> {
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          // 半透明，和卡片透明度一致，让背景透出。
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
           // 外层导航条圆角与整机方案等卡片一致（kCardRadius）。
           borderRadius: BorderRadius.circular(kCardRadius),
           boxShadow: [

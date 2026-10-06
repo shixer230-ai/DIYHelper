@@ -152,6 +152,10 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
   Future<void> _saveToItems() async {
     final plan = _current;
     if (plan == null || plan.components.isEmpty) return;
+    if (plan.total <= 0) {
+      _snack('整机价格不能为 0，请先为配件填写价格');
+      return;
+    }
 
     final store = HardwareStore();
     final items = await store.loadAll();

@@ -71,6 +71,7 @@ class _CustomItemFormPageState extends State<CustomItemFormPage> {
           children: [
             DropdownButtonFormField<String>(
               initialValue: _category,
+              borderRadius: BorderRadius.circular(12),
               decoration: const InputDecoration(
                 labelText: '类别',
                 border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),

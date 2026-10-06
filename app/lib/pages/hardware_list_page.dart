@@ -152,7 +152,7 @@ class _HardwareListPageState extends State<HardwareListPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(categoryIcon(category), size: 48, color: Colors.grey),
+          Icon(categoryIcon(category), size: 48, color: categoryColor(category)),
           const SizedBox(height: 8),
           Text('还没有「$category」的记录'),
           const SizedBox(height: 4),
@@ -184,10 +184,12 @@ class _HardwareCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isPlan = item.planId != null;
+    // 整机方案只展示方案名称，隐藏 CPU/显卡 等配件摘要。
     final subtitle = [
       if (item.brand.isNotEmpty) item.brand,
       if (item.platform.isNotEmpty) item.platform,
-      if (item.spec.isNotEmpty) item.spec,
+      if (item.spec.isNotEmpty && !isPlan) item.spec,
     ].join(' · ');
 
     return Card(
@@ -199,13 +201,7 @@ class _HardwareCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Icon(
-                  categoryIcon(item.category),
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
+              CategoryBadge(category: item.category),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -218,16 +214,18 @@ class _HardwareCard extends StatelessWidget {
                         fontSize: 16,
                       ),
                     ),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.planId != null ? '${item.category} · 点击查看方案' : item.category,
+                      item.category,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.primary,
                       ),

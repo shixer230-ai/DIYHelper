@@ -216,13 +216,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
     final results = rankPlans(_plans, _builtin, _library);
     final skipped = _plans.length - results.length;
+    final topIndex = results.isEmpty ? 0.0 : results.first.index;
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
         if (results.isEmpty)
           _empty(theme)
         else
-          for (var i = 0; i < results.length; i++) _card(theme, i, results[i]),
+          for (var i = 0; i < results.length; i++)
+            _card(theme, i, results[i], topIndex),
         if (results.isNotEmpty && skipped > 0)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -241,16 +243,22 @@ class _AnalysisPageState extends State<AnalysisPage> {
     final custom = _custom!;
     if (_plans.isEmpty) return _empty(theme);
 
+    // 性价比指数 = 分数 ÷ 整机总价 × 1000，越大越好；总价为 0 的排在最后。
+    double indexOf(BuildPlan p) {
+      final s = custom.scoreOf(p.id);
+      if (s == null || p.total <= 0) return double.negativeInfinity;
+      return s / p.total * 1000;
+    }
+
     final scored = _plans.where((p) => custom.scoreOf(p.id) != null).toList()
-      ..sort((a, b) =>
-          custom.scoreOf(b.id)!.compareTo(custom.scoreOf(a.id)!));
+      ..sort((a, b) => indexOf(b).compareTo(indexOf(a)));
     final unscored = _plans.where((p) => custom.scoreOf(p.id) == null).toList();
 
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
         Text(
-          '填写各方案的「${custom.scoreLabel}」，点 ✓ 保存后按分数从高到低排行。',
+          '填写各方案的「${custom.scoreLabel}」，点 ✓ 保存后按性价比指数从高到低排行。',
           style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
         ),
         const SizedBox(height: 8),
@@ -299,81 +307,149 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
-  Widget _card(ThemeData theme, int i, PlanValue v) {
+  Widget _card(ThemeData theme, int i, PlanValue v, double topIndex) {
     final isTop = i == 0;
+    // 相对第一名的百分比（第一名为 100%）；整机功耗越小越好，故用倒数。
+    final ratio = topIndex <= 0
+        ? 1.0
+        : (_isPower ? topIndex / v.index : v.index / topIndex);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Column(
           children: [
-            CircleAvatar(
-              backgroundColor: isTop
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.surfaceContainerHighest,
-              child: Text(
-                '${i + 1}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isTop
-                      ? theme.colorScheme.onPrimary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    v.planName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _isPower
-                        ? '整机功耗 ${_fmt(v.bench)}W'
-                        : '${v.partModel} · ${_builtin.label} ${_fmt(v.bench)}',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '整机 ¥${_fmt(v.price)}',
-                    style:
-                        theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Row(
               children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  transitionBuilder: (child, anim) =>
-                      FadeTransition(opacity: anim, child: child),
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isTop
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: Text(
-                    _isPower ? '${_fmt(v.index)}W' : v.index.toStringAsFixed(1),
-                    key: ValueKey(v.index),
+                    '${i + 1}',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: theme.colorScheme.primary,
+                      color: isTop
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
-                Text(
-                  _isPower ? '整机功耗' : '性价比指数',
-                  style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        v.planName,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _isPower
+                            ? '整机功耗 ${_fmt(v.bench)}W'
+                            : '${_builtin.label} ${_fmt(v.bench)}',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '整机 ¥${_fmt(v.price)}',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      transitionBuilder: (child, anim) =>
+                          FadeTransition(opacity: anim, child: child),
+                      child: Text(
+                        _isPower
+                            ? '${_fmt(v.index)}W'
+                            : v.index.toStringAsFixed(1),
+                        key: ValueKey(v.index),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _isPower ? '整机功耗' : '性价比指数',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: Colors.grey),
+                    ),
+                  ],
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            _valueBar(theme, ratio),
           ],
         ),
       ),
     );
+  }
+
+  /// 性价比相对条形图：第一名满格 100%，其余按比例缩短；低于 20% 时不再缩短，标注 <=20%。
+  Widget _valueBar(ThemeData theme, double ratio) {
+    final clamped = ratio < 0.2 ? 0.2 : ratio;
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 12,
+            alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: FractionallySizedBox(
+              widthFactor: clamped,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 56,
+          child: Text(
+            _pct(ratio),
+            textAlign: TextAlign.right,
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 把相对比例转成展示文本：第一名 100%，低于 20% 标 <=20%，其余保留整数百分比（不整则 1 位小数）。
+  String _pct(double ratio) {
+    if (ratio >= 1.0) return '100%';
+    final pct = ratio * 100;
+    if (pct < 20) return '<=20%';
+    final s = pct.toStringAsFixed(1);
+    return s.endsWith('.0') ? '${pct.round()}%' : '$s%';
   }
 }
 
@@ -458,16 +534,26 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
     final theme = Theme.of(context);
     final rank = widget.rank;
     final isTop = rank == 1;
+    final score = widget.item.scoreOf(widget.plan.id);
+    final index = (score != null && widget.plan.total > 0)
+        ? score / widget.plan.total * 1000
+        : null;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: isTop
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.surfaceContainerHighest,
+            Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isTop
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Text(
                 rank == null ? '—' : '$rank',
                 style: TextStyle(
@@ -488,6 +574,12 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
                     style: const TextStyle(
                         fontWeight: FontWeight.w600, fontSize: 16),
                   ),
+                  const SizedBox(height: 2),
+                  if (score != null)
+                    Text(
+                      '${widget.item.scoreLabel} ${_fmt(score)}',
+                      style: theme.textTheme.bodySmall,
+                    ),
                   const SizedBox(height: 2),
                   Text(
                     '整机 ¥${_fmt(widget.plan.total)}',
@@ -516,6 +608,30 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
                 ),
                 onSubmitted: (_) => _save(),
               ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  transitionBuilder: (child, anim) =>
+                      FadeTransition(opacity: anim, child: child),
+                  child: Text(
+                    index == null ? '—' : index.toStringAsFixed(1),
+                    key: ValueKey(index),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+                Text(
+                  '性价比指数',
+                  style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey),
+                ),
+              ],
             ),
           ],
         ),

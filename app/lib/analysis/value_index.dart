@@ -161,18 +161,19 @@ List<PlanValue> rankPlans(
   return results;
 }
 
-/// 对一批方案按「自定义项目」的分数排行，分数越高越靠前；没填分数的方案跳过。
+/// 对一批方案按「自定义项目」计算性价比指数（分数 ÷ 总价 × 1000）并降序排行；
+/// 没填分数、或总价为 0 的方案跳过。
 List<PlanValue> rankCustomPlans(List<BuildPlan> plans, CustomItem item) {
   final results = <PlanValue>[];
   for (final plan in plans) {
     final s = item.scoreOf(plan.id);
-    if (s == null) continue;
+    if (s == null || plan.total <= 0) continue;
     results.add(PlanValue(
       planName: plan.name.isEmpty ? '未命名方案' : plan.name,
       partModel: item.scoreLabel,
       bench: s,
       price: plan.total,
-      index: s,
+      index: s / plan.total * 1000,
     ));
   }
   results.sort((a, b) => b.index.compareTo(a.index));

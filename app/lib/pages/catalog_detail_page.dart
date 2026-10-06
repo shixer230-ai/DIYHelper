@@ -86,13 +86,7 @@ class _CatalogDetailPageState extends State<CatalogDetailPage> {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Icon(
-                  categoryIcon(spec.category),
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
+              CategoryBadge(category: spec.category),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

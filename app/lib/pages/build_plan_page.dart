@@ -422,13 +422,7 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: theme.colorScheme.primaryContainer,
-          child: Icon(
-            categoryIcon(slot.category),
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
-        ),
+        leading: CategoryBadge(category: slot.category),
         title: Text(slot.required ? slot.label : '${slot.label}（可选）'),
         subtitle: Text(
           comp == null
@@ -789,13 +783,7 @@ class _PlansSheetState extends State<_PlansSheet> {
     final selected = plan.id == _currentId;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        backgroundColor: theme.colorScheme.primaryContainer,
-        child: Icon(
-          Icons.computer,
-          color: theme.colorScheme.onPrimaryContainer,
-        ),
-      ),
+      leading: const CategoryBadge(category: '整机方案'),
       title: Text(_planName(plan)),
       subtitle: Text('${plan.filledCount} 件 · ¥${_fmt(plan.total)}'),
       trailing: Row(

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../theme/app_theme.dart';
 import 'analysis_page.dart';
 import 'build_plan_page.dart';
 import 'catalog_page.dart';
 import 'hardware_list_page.dart';
-import 'settings_page.dart';
+import 'profile_page.dart';
 
 /// 底部导航壳：清单 / 整机方案 / 硬件库 / 分析 / 设置。
 class HomeShell extends StatefulWidget {
@@ -28,39 +30,52 @@ class _HomeShellState extends State<HomeShell> {
       const BuildPlanPage(),
       const CatalogPage(),
       const AnalysisPage(),
-      const SettingsPage(),
+      const ProfilePage(),
     ];
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.list_alt_outlined),
-            selectedIcon: Icon(Icons.list_alt),
-            label: '清单',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.computer),
-            label: '整机方案',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book),
-            label: '硬件库',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            selectedIcon: Icon(Icons.insights),
-            label: '分析',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: '设置',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          // 外层导航条圆角与整机方案等卡片一致（kCardRadius）。
+          borderRadius: BorderRadius.circular(kCardRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (i) => setState(() => _index = i),
+          backgroundColor: Colors.transparent,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(LucideIcons.clipboard_list),
+              label: '清单',
+            ),
+            NavigationDestination(
+              icon: Icon(LucideIcons.computer),
+              label: '整机方案',
+            ),
+            NavigationDestination(
+              icon: Icon(LucideIcons.library),
+              label: '硬件库',
+            ),
+            NavigationDestination(
+              icon: Icon(LucideIcons.chart_bar),
+              label: '分析',
+            ),
+            NavigationDestination(
+              icon: Icon(LucideIcons.user),
+              label: '我的',
+            ),
+          ],
+        ),
       ),
     );
   }

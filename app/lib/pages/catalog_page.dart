@@ -281,13 +281,7 @@ class _CatalogPageState extends State<CatalogPage>
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          child: Icon(
-            categoryIcon(spec.category),
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
-        ),
+        leading: CategoryBadge(category: spec.category),
         title: Text(spec.model),
         subtitle: Text(spec.brand),
         trailing: const Icon(Icons.chevron_right),

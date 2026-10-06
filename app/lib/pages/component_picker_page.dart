@@ -287,13 +287,7 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: theme.colorScheme.primaryContainer,
-          child: Icon(
-            categoryIcon(spec.category),
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
-        ),
+        leading: CategoryBadge(category: spec.category),
         title: Text(spec.model),
         subtitle: Text(spec.brand),
         trailing: const Icon(Icons.chevron_right),
@@ -306,13 +300,7 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: theme.colorScheme.primaryContainer,
-          child: Icon(
-            categoryIcon(item.category),
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
-        ),
+        leading: CategoryBadge(category: item.category),
         title: Text(item.model),
         subtitle: Text(
           item.brand.isEmpty ? item.platform : '${item.brand} · ${item.platform}',

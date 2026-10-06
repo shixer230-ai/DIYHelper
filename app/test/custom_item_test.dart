@@ -35,22 +35,30 @@ void main() {
     expect(item.scoreLabel, '性能分');
   });
 
-  test('rankCustomPlans 按分数降序，跳过没填分数的方案', () {
+  test('rankCustomPlans 按性价比指数（分数÷总价×1000）降序，跳过没分/总价0的方案', () {
     final item = CustomItem(category: '游戏', name: '某游戏')
       ..setScore('p_hot', 120)
       ..setScore('p_mid', 60)
       ..setScore('p_cool', 45);
+    PlanComponent comp(double price) => PlanComponent(
+        category: 'CPU',
+        brand: 'Intel',
+        model: 'i5',
+        price: price,
+        platform: '京东');
     final plans = [
-      BuildPlan(id: 'p_cool', name: '低配'),
-      BuildPlan(id: 'p_mid', name: '中配'),
-      BuildPlan(id: 'p_hot', name: '高配'),
+      BuildPlan(id: 'p_cool', name: '低配', components: {'cpu': comp(3000)}),
+      BuildPlan(id: 'p_mid', name: '中配', components: {'cpu': comp(3000)}),
+      BuildPlan(id: 'p_hot', name: '高配', components: {'cpu': comp(12000)}),
       BuildPlan(id: 'p_none', name: '没分'),
     ];
+    // 指数：中配 60/3000=20 > 低配 45/3000=15 > 高配 120/12000=10
     final r = rankCustomPlans(plans, item);
     expect(r.length, 3);
-    expect(r[0].planName, '高配');
-    expect(r[0].bench, 120);
-    expect(r[1].planName, '中配');
-    expect(r[2].planName, '低配');
+    expect(r[0].planName, '中配');
+    expect(r[0].index, closeTo(20, 1e-9));
+    expect(r[1].planName, '低配');
+    expect(r[2].planName, '高配');
+    expect(r[2].bench, 120);
   });
 }

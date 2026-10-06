@@ -1,32 +1,67 @@
 import 'package:flutter/material.dart';
 
-/// ins 风主题：玫瑰粉主色，大圆角、低阴影、留白多。
-const _seed = Color(0xFFEC4899);
+/// 预设主题色（用户可在「我的」页一键切换）。
+const Color kDefaultSeed = Color(0xFFEC4899);
+
+/// 底部导航内层选中块的圆角。指示器固定 64×32，半径必须小于 16（半高），
+/// 否则又会变成胶囊形，所以这里用 10。
+const double kNavIndicatorRadius = 10;
+
+/// 卡片圆角半径：各页卡片与底部导航外层容器共用，保证圆角一致。
+const double kCardRadius = 16;
+
+/// 一个可选的预设主色。
+class SeedOption {
+  const SeedOption(this.name, this.color);
+
+  final String name;
+  final Color color;
+}
+
+/// 预设色卡：默认玫瑰粉 + 7 个常用色，贴合国内 app 的柔和配色。
+const List<SeedOption> kSeedOptions = [
+  SeedOption('玫瑰粉', Color(0xFFEC4899)),
+  SeedOption('天空蓝', Color(0xFF3B82F6)),
+  SeedOption('青绿', Color(0xFF10B981)),
+  SeedOption('活力橙', Color(0xFFF97316)),
+  SeedOption('优雅紫', Color(0xFF8B5CF6)),
+  SeedOption('热情红', Color(0xFFEF4444)),
+  SeedOption('湖水青', Color(0xFF06B6D4)),
+  SeedOption('深邃靛', Color(0xFF6366F1)),
+];
 
 /// 卡片圆角。
-const _cardRadius = BorderRadius.all(Radius.circular(16));
+const _cardRadius = BorderRadius.all(Radius.circular(kCardRadius));
 
 /// 输入框圆角。
 const _inputRadius = BorderRadius.all(Radius.circular(12));
 
-ThemeData buildLightTheme() {
-  final scheme = ColorScheme.fromSeed(seedColor: _seed);
-  return _base(scheme).copyWith(
-    scaffoldBackgroundColor: const Color(0xFFFDF8FB),
+ThemeData buildLightTheme({
+  Color seed = kDefaultSeed,
+  bool transparentBackground = false,
+}) {
+  final scheme = ColorScheme.fromSeed(seedColor: seed);
+  return _base(scheme, transparentBackground).copyWith(
+    scaffoldBackgroundColor:
+        transparentBackground ? Colors.transparent : const Color(0xFFFDF8FB),
     // 卡片用纯白，和偏暖白的背景拉开层次。
     colorScheme: scheme.copyWith(surface: Colors.white),
   );
 }
 
-ThemeData buildDarkTheme() {
+ThemeData buildDarkTheme({
+  Color seed = kDefaultSeed,
+  bool transparentBackground = false,
+}) {
   final scheme =
-      ColorScheme.fromSeed(seedColor: _seed, brightness: Brightness.dark);
-  return _base(scheme).copyWith(
-    scaffoldBackgroundColor: const Color(0xFF191216),
+      ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark);
+  return _base(scheme, transparentBackground).copyWith(
+    scaffoldBackgroundColor:
+        transparentBackground ? Colors.transparent : const Color(0xFF191216),
   );
 }
 
-ThemeData _base(ColorScheme scheme) {
+ThemeData _base(ColorScheme scheme, bool transparentBackground) {
   OutlineInputBorder inputBorder(BorderSide side) => OutlineInputBorder(
         borderRadius: _inputRadius,
         borderSide: side,
@@ -36,7 +71,10 @@ ThemeData _base(ColorScheme scheme) {
     useMaterial3: true,
     colorScheme: scheme,
     appBarTheme: AppBarTheme(
-      backgroundColor: scheme.surface,
+      backgroundColor: transparentBackground
+          ? Colors.transparent
+          : scheme.surface,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
@@ -47,7 +85,8 @@ ThemeData _base(ColorScheme scheme) {
       ),
     ),
     cardTheme: CardThemeData(
-      color: scheme.surface,
+      // 卡片半透明，和「分析项目」输入框一致（fillColor 0.5 透明度），让背景图透出。
+      color: scheme.surface.withValues(alpha: 0.5),
       elevation: 0,
       shape: const RoundedRectangleBorder(borderRadius: _cardRadius),
       clipBehavior: Clip.antiAlias,
@@ -74,6 +113,10 @@ ThemeData _base(ColorScheme scheme) {
       elevation: 0,
       height: 68,
       indicatorColor: scheme.primaryContainer,
+      // 选中指示器用圆角矩形（内层小块）。
+      indicatorShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(kNavIndicatorRadius),
+      ),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,

@@ -8,6 +8,7 @@ import '../models/hardware_spec.dart';
 import '../storage/build_plan_store.dart';
 import '../storage/hardware_store.dart';
 import '../storage/user_spec_store.dart';
+import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
 import 'component_picker_page.dart';
 
@@ -362,7 +363,7 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
     final theme = Theme.of(context);
     final filled = kBuildSlots.where((s) => plan[s.key] != null).length;
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       children: [
         _totalCard(theme, filled, plan.total),
         const SizedBox(height: 4),

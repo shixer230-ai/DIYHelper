@@ -8,6 +8,7 @@ import '../models/hardware_spec.dart';
 import '../storage/build_plan_store.dart';
 import '../storage/custom_item_store.dart';
 import '../storage/user_spec_store.dart';
+import '../theme/app_theme.dart';
 import 'custom_item_form_page.dart';
 
 /// 分析页：按所选「性价比项目」（内置跑分/功耗 + 自定义项目）给整机方案排行。
@@ -220,7 +221,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     final skipped = _plans.length - results.length;
     final topIndex = results.isEmpty ? 0.0 : results.first.index;
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       children: [
         if (results.isEmpty)
           _empty(theme)
@@ -257,7 +258,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     final unscored = _plans.where((p) => custom.scoreOf(p.id) == null).toList();
 
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       children: [
         Text(
           '填写各方案的「${custom.scoreLabel}」，点 ✓ 保存后按性价比指数从高到低排行。',

@@ -3,12 +3,19 @@ import 'package:flutter/material.dart';
 /// 预设主题色（用户可在「我的」页一键切换）。
 const Color kDefaultSeed = Color(0xFFEC4899);
 
-/// 底部导航内层选中块的圆角。指示器固定 64×32，半径必须小于 16（半高），
-/// 否则又会变成胶囊形，所以这里用 10。
-const double kNavIndicatorRadius = 10;
-
-/// 卡片圆角半径：各页卡片与底部导航外层容器共用，保证圆角一致。
+/// 卡片圆角半径：各页卡片共用，保证圆角一致。
 const double kCardRadius = 16;
+
+/// 底部导航外层胶囊的圆角：NavigationBar 高 68，取半高即胶囊形。
+const double kNavBarRadius = 34;
+
+/// 底部导航悬浮在内容上方时，内容底部需预留的高度：
+/// 导航高 68 + 上边距 8 + 下边距 12 = 88（系统底部安全区另算）。
+const double kNavOverlaySpace = 88;
+
+/// 底部导航悬浮时，内容底部需预留的总高度（含系统底部安全区）。
+double bottomNavClearance(BuildContext context) =>
+    kNavOverlaySpace + MediaQuery.paddingOf(context).bottom;
 
 /// 一个可选的预设主色。
 class SeedOption {
@@ -113,10 +120,8 @@ ThemeData _base(ColorScheme scheme, bool transparentBackground) {
       elevation: 0,
       height: 68,
       indicatorColor: scheme.primaryContainer,
-      // 选中指示器用圆角矩形（内层小块）。
-      indicatorShape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(kNavIndicatorRadius),
-      ),
+      // 选中指示器用圆形（内层小圆块）。
+      indicatorShape: const CircleBorder(),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,

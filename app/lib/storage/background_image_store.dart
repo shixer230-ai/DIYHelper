@@ -13,7 +13,10 @@ class BackgroundImageStore {
     final dir = await getApplicationDocumentsDirectory();
     await _deleteExisting(dir);
     final ext = _extensionOf(file.path);
-    final dest = File('${dir.path}/$_prefix$ext');
+    // 文件名带时间戳保证唯一：Flutter 的图片缓存按「路径」命中，
+    // 若换图后路径不变会继续显示上一张，导致「更换背景」看起来无效。
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final dest = File('${dir.path}/$_prefix$stamp.$ext');
     await dest.writeAsBytes(await file.readAsBytes());
     return dest.path;
   }

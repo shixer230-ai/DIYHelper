@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/hardware_catalog.dart';
 import '../models/hardware_spec.dart';
 import '../storage/user_spec_store.dart';
+import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
 import 'catalog_detail_page.dart';
 import 'user_spec_form_page.dart';
@@ -154,7 +155,7 @@ class _CatalogPageState extends State<CatalogPage>
       );
     }
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       children: [
         for (final category in _searchCategories)
           ..._searchSection(category, results),
@@ -186,7 +187,7 @@ class _CatalogPageState extends State<CatalogPage>
 
   Widget _buildMineTab() {
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       children: [
         Row(
           children: [
@@ -218,7 +219,7 @@ class _CatalogPageState extends State<CatalogPage>
     final specs = kHardwareCatalog.where((s) => s.category == category).toList();
     final sections = _brandSections(category, specs);
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       children: [
         Text(
           '预置参考型号，跑分为约值，点击查看详情。',

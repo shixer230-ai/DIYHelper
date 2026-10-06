@@ -33,14 +33,16 @@ class _HomeShellState extends State<HomeShell> {
       const ProfilePage(),
     ];
     return Scaffold(
+      // 让页面内容延伸到导航栏下方，导航栏悬浮在内容之上。
+      extendBody: true,
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         decoration: BoxDecoration(
-          // 半透明，和卡片透明度一致，让背景透出。
+          // 半透明，和卡片透明度一致，让下方内容透出。
           color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
-          // 外层导航条圆角与整机方案等卡片一致（kCardRadius）。
-          borderRadius: BorderRadius.circular(kCardRadius),
+          // 胶囊形：取导航条半高（kNavBarRadius=34）作为圆角。
+          borderRadius: BorderRadius.circular(kNavBarRadius),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),

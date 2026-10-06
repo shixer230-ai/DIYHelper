@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/hardware_item.dart';
 import '../storage/build_plan_store.dart';
 import '../storage/hardware_store.dart';
+import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
 import 'hardware_form_page.dart';
 
@@ -134,7 +135,7 @@ class _HardwareListPageState extends State<HardwareListPage>
     final items = _items.where((e) => e.category == category).toList();
     if (items.isEmpty) return _emptyCategory(category);
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];

@@ -43,7 +43,7 @@ class ProfilePage extends StatelessWidget {
         builder: (context, _) {
           final theme = Theme.of(context);
           return ListView(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
             children: [
               _header(theme, context),
               const SizedBox(height: 16),

@@ -25,7 +25,7 @@ class _CatalogPageState extends State<CatalogPage>
   String _query = '';
 
   // 预置库的品类顺序（即各 Tab 的顺序）。
-  static const _categories = ['CPU', '显卡', '主板', '内存', '硬盘'];
+  static const _categories = ['CPU', '显卡', '主板', '内存', '硬盘', '电源'];
 
   // 搜索结果的品类展示顺序（含用户自定义可能用到的品类）。
   static const _searchCategories = [

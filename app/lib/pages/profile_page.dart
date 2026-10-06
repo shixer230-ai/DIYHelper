@@ -3,11 +3,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../app_info.dart';
+import '../models/build_plan.dart';
 import '../storage/background_image_store.dart';
+import '../storage/build_plan_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
+import '../utils/category_icons.dart';
+import 'build_plan_page.dart' show kBuildSlots;
 
 /// 「我的」页：个人信息 + 自定义背景 + 主题色 + 外观（深浅色）+ 关于。
 class ProfilePage extends StatelessWidget {
@@ -56,6 +61,9 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 16),
               _sectionTitle(theme, '外观'),
               _appearanceCard(theme),
+              const SizedBox(height: 16),
+              _sectionTitle(theme, '工具'),
+              _toolsCard(theme, context),
               const SizedBox(height: 16),
               _sectionTitle(theme, '关于'),
               _aboutCard(context, theme),
@@ -234,6 +242,43 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  Widget _toolsCard(ThemeData theme, BuildContext context) {
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.ios_share),
+            title: const Text('导出配置单'),
+            subtitle: const Text('把整机方案生成文本，分享到微信 / 备忘录等'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _exportConfig(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 一键导出配置单：列出所有整机方案，选一个后用系统分享面板分享。
+  Future<void> _exportConfig(BuildContext context) async {
+    final plans = await BuildPlanStore().loadAll();
+    if (!context.mounted) return;
+    if (plans.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('还没有整机方案，先去「整机方案」页创建一个')),
+      );
+      return;
+    }
+    final plan = await showModalBottomSheet<BuildPlan>(
+      context: context,
+      builder: (_) => _ExportSheet(plans: plans),
+    );
+    if (plan == null || !context.mounted) return;
+    final name = _planName(plan);
+    await SharePlus.instance.share(
+      ShareParams(text: _configText(plan), subject: '$name 配置单'),
+    );
+  }
+
   Widget _aboutCard(BuildContext context, ThemeData theme) {
     return Card(
       child: Column(
@@ -390,4 +435,74 @@ class _NicknameDialogState extends State<_NicknameDialog> {
       ],
     );
   }
+}
+
+/// 选择要导出的方案。
+class _ExportSheet extends StatelessWidget {
+  const _ExportSheet({required this.plans});
+
+  final List<BuildPlan> plans;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '选择要导出的方案',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final plan in plans)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const CategoryBadge(category: '整机方案'),
+                      title: Text(_planName(plan)),
+                      subtitle: Text(
+                        '${plan.filledCount} 件 · ¥${_fmt(plan.total)}',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.pop(context, plan),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _planName(BuildPlan plan) =>
+    plan.name.isEmpty ? '未命名方案' : plan.name;
+
+String _fmt(double p) =>
+    p == p.roundToDouble() ? p.toStringAsFixed(0) : p.toStringAsFixed(2);
+
+/// 把单个整机方案排版成纯文本配置单。
+String _configText(BuildPlan plan) {
+  final buf = StringBuffer();
+  buf.writeln('【DIYHelper 配置单】${_planName(plan)}');
+  buf.writeln('──────────────');
+  for (final slot in kBuildSlots) {
+    final c = plan[slot.key];
+    if (c == null) continue;
+    final brand = c.brand.isEmpty ? '' : ' · ${c.brand}';
+    buf.writeln('${slot.label}  ${c.model}$brand  ¥${_fmt(c.price)}');
+  }
+  buf.writeln('──────────────');
+  buf.writeln('总价：¥${_fmt(plan.total)}');
+  buf.writeln('—— 来自 DIYHelper ——');
+  return buf.toString();
 }

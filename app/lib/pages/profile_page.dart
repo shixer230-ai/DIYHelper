@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../app_info.dart';
 import '../models/build_plan.dart';
+import '../storage/avatar_image_store.dart';
 import '../storage/background_image_store.dart';
 import '../storage/build_plan_store.dart';
 import '../theme/app_theme.dart';
@@ -28,6 +29,18 @@ class ProfilePage extends StatelessWidget {
     final path = await BackgroundImageStore.saveImage(file);
     if (!context.mounted) return;
     await ThemeController.instance.setBackground(path);
+  }
+
+  Future<void> _pickAvatar(BuildContext context) async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
+    if (file == null) return;
+    final path = await AvatarImageStore.saveImage(file);
+    if (!context.mounted) return;
+    await ThemeController.instance.setAvatar(path);
   }
 
   Future<void> _editNickname(BuildContext context) async {
@@ -76,47 +89,81 @@ class ProfilePage extends StatelessWidget {
 
   Widget _header(ThemeData theme, BuildContext context) {
     final nickname = ThemeController.instance.nickname;
+    final avatarPath = ThemeController.instance.avatarPath;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _editNickname(context),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Icon(
-                  LucideIcons.user_round,
-                  size: 30,
-                  color: theme.colorScheme.onPrimaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            _avatar(theme, context, avatarPath),
+            const SizedBox(width: 14),
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _editNickname(context),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        nickname,
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '点击修改昵称',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: Colors.grey),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      nickname,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '点击修改昵称',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
-            ],
-          ),
+            ),
+            const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
+          ],
         ),
+      ),
+    );
+  }
+
+  /// 头像：有自定义图片则显示图片，否则显示默认人形图标；点击更换，右下角相机小标提示。
+  Widget _avatar(ThemeData theme, BuildContext context, String? path) {
+    return InkWell(
+      customBorder: const CircleBorder(),
+      onTap: () => _pickAvatar(context),
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: theme.colorScheme.primaryContainer,
+            backgroundImage: path == null ? null : FileImage(File(path)),
+            child: path == null
+                ? Icon(
+                    LucideIcons.user_round,
+                    size: 30,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  )
+                : null,
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: theme.colorScheme.surface, width: 2),
+              ),
+              child: const Icon(Icons.camera_alt, size: 12, color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -199,7 +246,7 @@ class ProfilePage extends StatelessWidget {
 
   Widget _swatch(ThemeData theme, SeedOption option, bool selected) {
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      customBorder: const CircleBorder(),
       onTap: () => ThemeController.instance.setSeed(option.color),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -210,7 +257,7 @@ class ProfilePage extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: option.color,
-              borderRadius: BorderRadius.circular(12),
+              shape: BoxShape.circle,
               border: selected
                   ? Border.all(color: theme.colorScheme.onSurface, width: 3)
                   : null,

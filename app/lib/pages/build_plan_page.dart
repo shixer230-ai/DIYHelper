@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../app_info.dart';
 import '../analysis/compat_check.dart';
 import '../analysis/value_index.dart';
 import '../data/hardware_catalog.dart';
@@ -45,7 +46,8 @@ class BuildPlanPage extends StatefulWidget {
   State<BuildPlanPage> createState() => _BuildPlanPageState();
 }
 
-class _BuildPlanPageState extends State<BuildPlanPage> {
+class _BuildPlanPageState extends State<BuildPlanPage>
+    with AutomaticKeepAliveClientMixin {
   final _store = BuildPlanStore();
   List<BuildPlan> _plans = [];
   String? _currentId;
@@ -53,6 +55,9 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
 
   // 硬件库（预置 + 我的添加），用于计算默认的 CPU+显卡 功耗。
   List<HardwareSpec> _library = [];
+
+  @override
+  bool get wantKeepAlive => true;
 
   BuildPlan? get _current {
     for (final p in _plans) {
@@ -158,6 +163,21 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
       customPower: plan.customPower,
     );
     updated.set(slot.key, result.$1 ? null : result.$2);
+    setState(() => _replace(plan.id, updated));
+    await _store.saveAll(_plans);
+  }
+
+  /// 移除某个槽位里已选的配件（槽位卡片最右侧的删除按钮）。
+  Future<void> _clearSlot(BuildSlot slot) async {
+    final plan = _current;
+    if (plan == null || plan[slot.key] == null) return;
+    final updated = BuildPlan(
+      id: plan.id,
+      name: plan.name,
+      components: Map.of(plan.components),
+      customPower: plan.customPower,
+    );
+    updated.set(slot.key, null);
     setState(() => _replace(plan.id, updated));
     await _store.saveAll(_plans);
   }
@@ -310,12 +330,46 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
   String _fmt(double p) =>
       p == p.roundToDouble() ? p.toStringAsFixed(0) : p.toStringAsFixed(2);
 
+  /// AppBar 标题：方案名（放大）+ 版本标签（Beta 1.0.1）一行显示。
+  Widget _planTitle(BuildContext context, BuildPlan plan) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            _planName(plan),
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            kAppVersion,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final plan = _current;
     return Scaffold(
       appBar: AppBar(
-        title: Text(plan == null ? '整机方案' : _planName(plan)),
+        title: plan == null ? const Text('整机方案') : _planTitle(context, plan),
         actions: [
           IconButton(
             onPressed: _createPlan,
@@ -378,7 +432,7 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
         12 + bottomNavClearance(context),
       ),
       children: [
-        _totalCard(theme, filled, plan.total),
+        _totalLine(theme, filled, plan.total),
         _compatCard(theme, plan),
         const SizedBox(height: 4),
         for (final slot in kBuildSlots) _slotCard(theme, slot, plan),
@@ -394,45 +448,58 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
           onPressed: plan.components.isEmpty ? null : _saveToItems,
           icon: const Icon(Icons.save_alt),
           label: const Text('保存到我的清单'),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            // 与卡片一致：胶囊圆角 + 半透明底色。
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(kCardRadius),
+            ),
+            backgroundColor: theme.colorScheme.surface.withValues(alpha: 0.5),
+            foregroundColor: theme.colorScheme.primary,
+            disabledBackgroundColor:
+                theme.colorScheme.surface.withValues(alpha: 0.3),
+            disabledForegroundColor:
+                theme.colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
         ),
       ],
     );
   }
 
-  Widget _totalCard(ThemeData theme, int filled, double total) {
-    final onColor = theme.colorScheme.onPrimaryContainer;
-    return Card(
-      color: theme.colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text(
-              '总金额',
-              style: theme.textTheme.bodyMedium?.copyWith(color: onColor),
+  /// 总金额不再用卡片，直接以文字显示在最上方。
+  Widget _totalLine(ThemeData theme, int filled, double total) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '总金额',
+            // 与金额同字号（headlineSmall），保持一行观感统一。
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 4),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              transitionBuilder: (child, anim) =>
-                  FadeTransition(opacity: anim, child: child),
-              child: Text(
-                '¥${_fmt(total)}',
-                key: ValueKey(total),
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: onColor,
-                ),
+          ),
+          const SizedBox(width: 8),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, anim) =>
+                FadeTransition(opacity: anim, child: child),
+            child: Text(
+              '¥${_fmt(total)}',
+              key: ValueKey(total),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              '已选 $filled / ${kBuildSlots.length} 项',
-              style: theme.textTheme.bodySmall?.copyWith(color: onColor),
-            ),
-          ],
-        ),
+          ),
+          const Spacer(),
+          Text(
+            '已选 $filled / ${kBuildSlots.length} 项',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+        ],
       ),
     );
   }
@@ -445,7 +512,7 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
       margin: const EdgeInsets.only(bottom: 8),
       color: Colors.amber.withValues(alpha: 0.12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(kCardRadius),
         side: BorderSide(color: Colors.amber.withValues(alpha: 0.6)),
       ),
       child: Padding(
@@ -491,10 +558,15 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
   Widget _slotCard(ThemeData theme, BuildSlot slot, BuildPlan plan) {
     final comp = plan[slot.key];
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
+        // 瘦身：dense 减小上下留白，卡片更紧凑。
+        dense: true,
         leading: CategoryBadge(category: slot.category),
-        title: Text(slot.required ? slot.label : '${slot.label}（可选）'),
+        title: Text(
+          slot.required ? slot.label : '${slot.label}（可选）',
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        ),
         subtitle: Text(
           comp == null
               ? '未选择'
@@ -502,15 +574,30 @@ class _BuildPlanPageState extends State<BuildPlanPage> {
               ? comp.model
               : '${comp.model} · ${comp.brand}',
         ),
+        // 右边只保留价格 + 删除按钮，不再显示「>」箭头。
         trailing: comp == null
-            ? const Icon(Icons.chevron_right)
-            : Text(
-                '¥${_fmt(comp.price)}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: theme.colorScheme.primary,
-                ),
+            ? null
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '¥${_fmt(comp.price)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _clearSlot(slot),
+                    tooltip: '移除${slot.label}',
+                    icon: Icon(
+                      Icons.close,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
         onTap: () => _pick(slot),
       ),
@@ -598,6 +685,8 @@ class _PowerEditorState extends State<_PowerEditor> {
     final theme = Theme.of(context);
     final auto = widget.autoPower;
     return Card(
+      // 和其它卡片一样贴满宽度，避免默认 4px 外边距让功耗卡变窄。
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

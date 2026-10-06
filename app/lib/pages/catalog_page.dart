@@ -18,7 +18,7 @@ class CatalogPage extends StatefulWidget {
 }
 
 class _CatalogPageState extends State<CatalogPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   final _userStore = UserSpecStore();
   final _searchController = TextEditingController();
   List<HardwareSpec> _userSpecs = [];
@@ -40,6 +40,9 @@ class _CatalogPageState extends State<CatalogPage>
   ];
 
   late final TabController _tabController;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -93,6 +96,7 @@ class _CatalogPageState extends State<CatalogPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       appBar: AppBar(title: const Text('硬件库')),
       body: Column(
@@ -157,7 +161,13 @@ class _CatalogPageState extends State<CatalogPage>
                 )
               : null,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
           ),
           isDense: true,
         ),

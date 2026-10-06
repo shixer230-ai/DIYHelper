@@ -22,7 +22,8 @@ class AnalysisPage extends StatefulWidget {
   State<AnalysisPage> createState() => _AnalysisPageState();
 }
 
-class _AnalysisPageState extends State<AnalysisPage> {
+class _AnalysisPageState extends State<AnalysisPage>
+    with AutomaticKeepAliveClientMixin {
   final _planStore = BuildPlanStore();
   final _userStore = UserSpecStore();
   final _customStore = CustomItemStore();
@@ -33,6 +34,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
   ValueItem _builtin = kValueItems.first; // 选中的内置项目
   String? _customId; // 选中的自定义项目 id（null = 没选自定义）
   bool _loading = true;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -161,6 +165,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('性价比分析')),
@@ -184,12 +189,20 @@ class _AnalysisPageState extends State<AnalysisPage> {
             child: DropdownButtonFormField<_Choice>(
               initialValue: _selectedChoice,
               isExpanded: true,
-              // 展开的选择菜单也做圆角，和输入框(12)一致。
-              borderRadius: BorderRadius.circular(12),
+              // 展开的选择菜单与输入框统一用胶囊圆角，和底部导航一致。
+              borderRadius: BorderRadius.circular(kNavBarRadius),
               decoration: const InputDecoration(
                 labelText: '分析项目',
                 prefixIcon: Icon(Icons.tune),
-                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
+                ),
                 isDense: true,
               ),
               items: [
@@ -423,18 +436,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
       children: [
         Expanded(
           child: Container(
-            height: 12,
+            height: 18,
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(9),
             ),
             child: FractionallySizedBox(
               widthFactor: clamped,
               child: Container(
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(9),
                 ),
               ),
             ),

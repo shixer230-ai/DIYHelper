@@ -2,7 +2,7 @@
 // 版本号与署名在此统一维护，避免多处写死导致不一致。
 
 /// 当前对外版本号（显示在「我的」页）。
-const String kAppVersion = '1.0.1';
+const String kAppVersion = 'Beta 1.1.0';
 
 /// 版本更新日志，最新的排在最前。
 class VersionLogEntry {
@@ -13,6 +13,13 @@ class VersionLogEntry {
 }
 
 const List<VersionLogEntry> kVersionLog = [
+  VersionLogEntry('1.1.0', [
+    '「我的」页支持更换头像（点头像从相册选图）',
+    '分析页性价比柱状图加粗、改为胶囊形',
+    '主题色选择由圆角方块改为圆形色块',
+    '界面圆角统一为胶囊形，与底部导航一致',
+    '「保存到我的清单」按钮改为半透明胶囊样式',
+  ]),
   VersionLogEntry('1.0.1', [
     '一键导出配置单（「我的」页，走系统分享面板）',
     '清单自定义硬件同步到硬件库「我的添加」，并支持写性能分',

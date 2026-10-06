@@ -20,10 +20,32 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+  late final PageController _pageController;
 
-  void _openPlanTab() {
-    setState(() => _index = 1);
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
   }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  /// 切换标签页：更新选中态并播放滑动动画。
+  void _switchTo(int i) {
+    if (i == _index) return;
+    setState(() => _index = i);
+    _pageController.animateToPage(
+      i,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _openPlanTab() => _switchTo(1);
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +59,12 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       // 让页面内容延伸到导航栏下方，导航栏悬浮在内容之上。
       extendBody: true,
-      body: IndexedStack(index: _index, children: pages),
+      body: PageView(
+        controller: _pageController,
+        // 只通过底部导航切换（带滑动动画），禁用手势避免与页面内 TabBarView 冲突。
+        physics: const NeverScrollableScrollPhysics(),
+        children: pages,
+      ),
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         decoration: BoxDecoration(
@@ -62,7 +89,7 @@ class _HomeShellState extends State<HomeShell> {
                   .withValues(alpha: 0.5),
               child: NavigationBar(
                 selectedIndex: _index,
-                onDestinationSelected: (i) => setState(() => _index = i),
+                onDestinationSelected: _switchTo,
                 backgroundColor: Colors.transparent,
                 destinations: const [
                   NavigationDestination(

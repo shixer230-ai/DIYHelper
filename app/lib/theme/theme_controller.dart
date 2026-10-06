@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../storage/avatar_image_store.dart';
 import '../storage/background_image_store.dart';
 import '../storage/settings_store.dart';
 import 'app_theme.dart';
@@ -14,6 +15,7 @@ class ThemeController extends ChangeNotifier {
   ThemeMode _mode = ThemeMode.system;
   Color _seed = kDefaultSeed;
   String? _backgroundPath;
+  String? _avatarPath;
   bool _backgroundBlur = false;
   String _nickname = SettingsStore.defaultNickname;
 
@@ -22,6 +24,7 @@ class ThemeController extends ChangeNotifier {
   String? get backgroundPath => _backgroundPath;
   bool get backgroundBlur => _backgroundBlur;
   bool get hasBackground => _backgroundPath != null;
+  String? get avatarPath => _avatarPath;
   String get nickname => _nickname;
 
   /// 启动时从本地读取外观偏好。
@@ -30,6 +33,7 @@ class ThemeController extends ChangeNotifier {
     _seed = await _store.loadSeed();
     _backgroundBlur = await _store.loadBackgroundBlur();
     _backgroundPath = await BackgroundImageStore.storedImagePath();
+    _avatarPath = await AvatarImageStore.storedImagePath();
     _nickname = await _store.loadNickname();
   }
 
@@ -76,5 +80,18 @@ class ThemeController extends ChangeNotifier {
     _nickname = nickname;
     notifyListeners();
     await _store.saveNickname(nickname);
+  }
+
+  /// 设置头像（图片已由 AvatarImageStore 存到本地，路径即持久化）。
+  Future<void> setAvatar(String path) async {
+    _avatarPath = path;
+    notifyListeners();
+  }
+
+  /// 移除头像，恢复默认人形图标。
+  Future<void> clearAvatar() async {
+    await AvatarImageStore.delete();
+    _avatarPath = null;
+    notifyListeners();
   }
 }

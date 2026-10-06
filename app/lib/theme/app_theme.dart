@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 /// 预设主题色（用户可在「我的」页一键切换）。
 const Color kDefaultSeed = Color(0xFFEC4899);
 
-/// 卡片圆角半径：各页卡片共用，保证圆角一致。
-const double kCardRadius = 16;
+/// 卡片圆角半径：各页卡片共用，增大到与底部胶囊导航栏（kNavBarRadius）一致。
+const double kCardRadius = 34;
 
 /// 底部导航外层胶囊的圆角：NavigationBar 高 68，取半高即胶囊形。
 const double kNavBarRadius = 34;

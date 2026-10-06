@@ -22,7 +22,7 @@ class HardwareListPage extends StatefulWidget {
 }
 
 class _HardwareListPageState extends State<HardwareListPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   final _store = HardwareStore();
   List<HardwareItem> _items = [];
   bool _loading = true;
@@ -42,6 +42,9 @@ class _HardwareListPageState extends State<HardwareListPage>
 
   late final TabController _tabController;
   int _currentIndex = 0;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -119,6 +122,7 @@ class _HardwareListPageState extends State<HardwareListPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final currentCategory = _categories[_currentIndex];
     return Scaffold(
       appBar: AppBar(
@@ -244,7 +248,7 @@ class _HardwareCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(kCardRadius),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -258,9 +262,10 @@ class _HardwareCard extends StatelessWidget {
                   children: [
                     Text(
                       item.model,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                      style: TextStyle(
+                        // 整机方案：方案名加粗加大；普通硬件保持原样。
+                        fontWeight: isPlan ? FontWeight.w700 : FontWeight.w600,
+                        fontSize: isPlan ? 19 : 16,
                       ),
                     ),
                     if (subtitle.isNotEmpty) ...[
@@ -282,8 +287,8 @@ class _HardwareCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     '¥${_formatPrice(item.price)}',
@@ -300,8 +305,6 @@ class _HardwareCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (onTap != null)
-                const Icon(Icons.chevron_right, color: Colors.grey),
             ],
           ),
         ),

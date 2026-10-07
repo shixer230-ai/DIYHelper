@@ -37,24 +37,53 @@ out vec4 fragColor;
 
 const int kMaxShapes = 8;
 
+// Signed distance of one rounded-box shape. Values are the raw packed floats
+// (cx, cy, halfW, halfH, cornerR, all as backdrop fractions) — passed by value
+// so the caller indexes uShapeData with literal constants (see below).
+float shapeSDF(vec2 p, float cx, float cy, float hw, float hh, float r) {
+  vec2 c = vec2(cx, cy) * uSize;
+  vec2 b = vec2(hw, hh) * uSize;
+  float rr = r * uSize.x;
+  return sdRoundedBox(p - c, b, rr);
+}
+
 // Combined signed distance of all active shapes, smin-blended. Geometry is
 // stored as a fraction of the backdrop; multiply by uSize to get pixels in the
 // same space as FlutterFragCoord. Scalars (corner radius, blend) use uSize.x —
 // the per-axis ratio is identical, so x and y share one scale.
+//
+// The shape loop is fully unrolled with literal uShapeData indices: Impeller's
+// SkSL compiler rejects indexing a uniform array with a loop induction variable
+// ("index expression must be constant"), so each of the kMaxShapes slots is
+// sampled explicitly and guarded by `count > n` (the runtime shape count).
 float sceneSDF(vec2 p) {
   float d = 1.0e9;
   int count = int(uShapeCount + 0.5);
   float blendPx = uBlend * uSize.x;
-  for (int i = 0; i < kMaxShapes; i++) {
-    if (i >= count) {
-      break;
-    }
-    int o = i * 6;
-    vec2 c = vec2(uShapeData[o + 1], uShapeData[o + 2]) * uSize;
-    vec2 b = vec2(uShapeData[o + 3], uShapeData[o + 4]) * uSize;
-    float r = uShapeData[o + 5] * uSize.x;
-    float di = sdRoundedBox(p - c, b, r);
-    d = (i == 0) ? di : sminPoly(d, di, blendPx);
+
+  if (count > 0) {
+    d = shapeSDF(p, uShapeData[1], uShapeData[2], uShapeData[3], uShapeData[4], uShapeData[5]);
+  }
+  if (count > 1) {
+    d = sminPoly(d, shapeSDF(p, uShapeData[7], uShapeData[8], uShapeData[9], uShapeData[10], uShapeData[11]), blendPx);
+  }
+  if (count > 2) {
+    d = sminPoly(d, shapeSDF(p, uShapeData[13], uShapeData[14], uShapeData[15], uShapeData[16], uShapeData[17]), blendPx);
+  }
+  if (count > 3) {
+    d = sminPoly(d, shapeSDF(p, uShapeData[19], uShapeData[20], uShapeData[21], uShapeData[22], uShapeData[23]), blendPx);
+  }
+  if (count > 4) {
+    d = sminPoly(d, shapeSDF(p, uShapeData[25], uShapeData[26], uShapeData[27], uShapeData[28], uShapeData[29]), blendPx);
+  }
+  if (count > 5) {
+    d = sminPoly(d, shapeSDF(p, uShapeData[31], uShapeData[32], uShapeData[33], uShapeData[34], uShapeData[35]), blendPx);
+  }
+  if (count > 6) {
+    d = sminPoly(d, shapeSDF(p, uShapeData[37], uShapeData[38], uShapeData[39], uShapeData[40], uShapeData[41]), blendPx);
+  }
+  if (count > 7) {
+    d = sminPoly(d, shapeSDF(p, uShapeData[43], uShapeData[44], uShapeData[45], uShapeData[46], uShapeData[47]), blendPx);
   }
   return d;
 }

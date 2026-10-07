@@ -2,7 +2,7 @@
 // 版本号与署名在此统一维护，避免多处写死导致不一致。
 
 /// 当前对外版本号（显示在「我的」页）。
-const String kAppVersion = 'Beta 1.1.2';
+const String kAppVersion = 'Beta 1.1.3';
 
 /// 版本更新日志，最新的排在最前。
 class VersionLogEntry {
@@ -13,6 +13,11 @@ class VersionLogEntry {
 }
 
 const List<VersionLogEntry> kVersionLog = [
+  VersionLogEntry('Beta 1.1.3', [
+    '修复液态玻璃着色器在 Impeller 下编译失败，底部导航恢复真实折射与高光',
+    '整机方案空状态「新建方案」按钮、各弹窗操作按钮统一胶囊半透明样式',
+    '更新日志精简：移除早期开发版本（1.0.0 ~ 1.7.0）记录',
+  ]),
   VersionLogEntry('Beta 1.1.2', [
     '新增一键导入配置单：粘贴「导出配置单」文本即可还原整机方案',
     '整机方案改为文件夹列表展示（单行堆叠），点击进入具体配置',
@@ -43,6 +48,7 @@ const List<VersionLogEntry> kVersionLog = [
     '硬件库：Tab 分栏、品牌分组搜索、我的添加',
     '个性化：主题色、自定义背景、深浅色、昵称',
     '底部导航背景模糊 + 分类页圆角胶囊高亮',
+    '兼容性检测：CPU / 主板 / 内存黄色提醒',
   ]),
 ];
 

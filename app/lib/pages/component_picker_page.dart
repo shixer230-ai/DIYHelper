@@ -184,9 +184,8 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
             onPressed: _manual,
             icon: const Icon(Icons.edit),
             label: const Text('手动填写型号和价格'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-            ),
+            // 与全站主按钮统一：胶囊圆角 + 半透明玻璃底色。
+            style: capsuleButtonStyle(theme),
           ),
         ),
       ),
@@ -196,19 +195,25 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
   Widget _searchBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searching
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  tooltip: '清空',
-                  onPressed: _searchController.clear,
-                )
-              : null,
-          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-          isDense: true,
+      // 与硬件库搜索框统一：玻璃半透明底 + 胶囊圆角。
+      child: GlassField(
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _searching
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    tooltip: '清空',
+                    onPressed: _searchController.clear,
+                  )
+                : null,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            filled: false,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          ),
         ),
       ),
     );
@@ -385,7 +390,11 @@ class _SpecPriceDialogState extends State<_SpecPriceDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        FilledButton(onPressed: _submit, child: const Text('确定')),
+        FilledButton(
+          onPressed: _submit,
+          style: capsuleButtonStyle(Theme.of(context), fullWidth: false),
+          child: const Text('确定'),
+        ),
       ],
     );
   }
@@ -464,7 +473,11 @@ class _ManualEntryDialogState extends State<_ManualEntryDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        FilledButton(onPressed: _submit, child: const Text('确定')),
+        FilledButton(
+          onPressed: _submit,
+          style: capsuleButtonStyle(Theme.of(context), fullWidth: false),
+          child: const Text('确定'),
+        ),
       ],
     );
   }

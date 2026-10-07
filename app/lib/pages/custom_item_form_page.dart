@@ -75,7 +75,7 @@ class _CustomItemFormPageState extends State<CustomItemFormPage> {
               borderRadius: BorderRadius.circular(12),
               decoration: const InputDecoration(
                 labelText: '类别',
-                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
               ),
               items: _categories
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
@@ -88,7 +88,7 @@ class _CustomItemFormPageState extends State<CustomItemFormPage> {
               decoration: InputDecoration(
                 labelText: '$_nameLabel *',
                 hintText: _nameHint,
-                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
               ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? '请填写名称' : null,
@@ -101,7 +101,7 @@ class _CustomItemFormPageState extends State<CustomItemFormPage> {
                   labelText: '预设画质描述',
                   hintText: '如：1080P 高画质 / 2K 高画质',
                   helperText: '用于区分同一游戏的不同画质档位',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
                 ),
               ),
             ],

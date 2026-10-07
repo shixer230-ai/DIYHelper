@@ -622,7 +622,7 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
                 decoration: InputDecoration(
                   labelText: widget.item.scoreLabel,
                   isDense: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.check, size: 18),
                     tooltip: '保存',

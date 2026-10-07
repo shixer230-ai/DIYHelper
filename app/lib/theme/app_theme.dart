@@ -21,16 +21,34 @@ double bottomNavClearance(BuildContext context) =>
 
 /// 主操作按钮统一风格：胶囊圆角 + 半透明底色（透明圆角），
 /// 用于「加入我的清单」「保存到我的清单」等主要按钮，保证观感一致。
-ButtonStyle capsuleButtonStyle(ThemeData theme) {
+ButtonStyle capsuleButtonStyle(ThemeData theme, {bool fullWidth = true}) {
   final scheme = theme.colorScheme;
   return FilledButton.styleFrom(
-    minimumSize: const Size.fromHeight(48),
+    // 列表/底栏里的主按钮默认占满宽度；空状态等居中场景传 fullWidth: false，
+    // 让按钮按内容自适应宽度，避免被拉成一条过长的「条」。
+    minimumSize: fullWidth ? const Size.fromHeight(48) : const Size(0, 48),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(kCardRadius),
     ),
     backgroundColor: scheme.surface.withValues(alpha: 0.5),
     foregroundColor: scheme.primary,
     disabledBackgroundColor: scheme.surface.withValues(alpha: 0.3),
+    disabledForegroundColor: scheme.onSurface.withValues(alpha: 0.4),
+  );
+}
+
+/// 次级操作按钮统一风格：与主按钮同款胶囊圆角 + 半透明底色 + 细描边，
+/// 用于「加入我的添加」等次要按钮，观感与主按钮一致（玻璃描边版）。
+ButtonStyle capsuleOutlinedButtonStyle(ThemeData theme) {
+  final scheme = theme.colorScheme;
+  return OutlinedButton.styleFrom(
+    minimumSize: const Size.fromHeight(48),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(kCardRadius),
+    ),
+    side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+    backgroundColor: scheme.surface.withValues(alpha: 0.3),
+    foregroundColor: scheme.primary,
     disabledForegroundColor: scheme.onSurface.withValues(alpha: 0.4),
   );
 }

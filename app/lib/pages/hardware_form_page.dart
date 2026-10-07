@@ -5,6 +5,7 @@ import '../models/hardware_item.dart';
 import '../models/hardware_spec.dart';
 import '../storage/hardware_store.dart';
 import '../storage/user_spec_store.dart';
+import '../theme/app_theme.dart';
 
 const _categories = ['CPU', '主板', '显卡', '内存', '硬盘', '电源', '机箱', '其他'];
 const _platforms = ['京东', '淘宝', '拼多多', '天猫', '其他'];
@@ -227,14 +228,8 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
             const SizedBox(height: 32),
             FilledButton(
               onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                // 半透明胶囊保存按钮，和全站玻璃/胶囊风格保持一致。
-                backgroundColor:
-                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.16),
-                foregroundColor: Theme.of(context).colorScheme.primary,
-                shape: const StadiumBorder(),
-              ),
+              // 与「保存到我的添加」等主按钮统一：胶囊圆角 + 半透明玻璃底色。
+              style: capsuleButtonStyle(Theme.of(context)),
               child: const Text('保存'),
             ),
           ],

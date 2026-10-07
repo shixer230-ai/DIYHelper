@@ -101,7 +101,7 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(width: 14),
             Expanded(
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(999),
                 onTap: () => _editNickname(context),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -180,7 +180,7 @@ class ProfilePage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(kCardRadius),
                 child: SizedBox(
                   height: 140,
                   width: double.infinity,
@@ -540,7 +540,11 @@ class _NicknameDialogState extends State<_NicknameDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        FilledButton(onPressed: _submit, child: const Text('确定')),
+        FilledButton(
+          onPressed: _submit,
+          style: capsuleButtonStyle(Theme.of(context), fullWidth: false),
+          child: const Text('确定'),
+        ),
       ],
     );
   }
@@ -712,7 +716,11 @@ class _ImportDialogState extends State<_ImportDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        FilledButton(onPressed: _submit, child: const Text('导入')),
+        FilledButton(
+          onPressed: _submit,
+          style: capsuleButtonStyle(Theme.of(context), fullWidth: false),
+          child: const Text('导入'),
+        ),
       ],
     );
   }

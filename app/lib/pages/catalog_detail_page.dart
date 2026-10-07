@@ -136,9 +136,7 @@ class _CatalogDetailPageState extends State<CatalogDetailPage> {
               _inMine ? Icons.bookmark_remove : Icons.bookmark_add_outlined,
             ),
             label: Text(_inMine ? '从「我的添加」移除' : '加入「我的添加」'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-            ),
+            style: capsuleOutlinedButtonStyle(theme),
           ),
         ],
       ),
@@ -251,7 +249,11 @@ class _AddPriceDialogState extends State<_AddPriceDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        FilledButton(onPressed: _submit, child: const Text('加入')),
+        FilledButton(
+          onPressed: _submit,
+          style: capsuleButtonStyle(Theme.of(context), fullWidth: false),
+          child: const Text('加入'),
+        ),
       ],
     );
   }

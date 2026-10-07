@@ -123,7 +123,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
               borderRadius: BorderRadius.circular(12),
               decoration: const InputDecoration(
                 labelText: '品类',
-                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
               ),
               items: _categories
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
@@ -136,7 +136,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
               decoration: const InputDecoration(
                 labelText: '型号 *',
                 hintText: '例如：i5-13600KF / RTX 3060',
-                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
               ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? '请填写型号' : null,
@@ -147,7 +147,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
               decoration: const InputDecoration(
                 labelText: '品牌',
                 hintText: '例如：Intel / 华硕',
-                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
               ),
             ),
             const SizedBox(height: 24),
@@ -226,7 +226,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
                     decoration: const InputDecoration(
                       labelText: '名称',
                       hintText: '如：核心/线程',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
                       isDense: true,
                     ),
                   ),
@@ -238,7 +238,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
                     decoration: const InputDecoration(
                       labelText: '数值',
                       hintText: '如：8核16线程',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
                       isDense: true,
                     ),
                   ),
@@ -284,7 +284,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
               decoration: InputDecoration(
                 labelText: item.label,
                 hintText: '如：约 10500',
-                border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
                 isDense: true,
               ),
             ),
@@ -316,7 +316,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
           decoration: const InputDecoration(
             labelText: '功耗',
             hintText: '如：65W / 450W',
-            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
             isDense: true,
           ),
         ),

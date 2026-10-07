@@ -285,6 +285,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, 'new'),
+            style: capsuleButtonStyle(Theme.of(context), fullWidth: false),
             child: const Text('另存为新名称'),
           ),
         ],
@@ -449,7 +450,8 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     );
   }
 
-  Widget _emptyState() {
+  Widget _emptyState(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -467,6 +469,8 @@ class _BuildPlanPageState extends State<BuildPlanPage>
             onPressed: _createPlan,
             icon: const Icon(Icons.add),
             label: const Text('新建方案'),
+            // 空状态居中展示，按钮按内容自适应宽度（不是满宽长条）。
+            style: capsuleButtonStyle(theme, fullWidth: false),
           ),
         ],
       ),
@@ -475,7 +479,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
 
   /// 文件夹视图：每个整机方案一行，纵向堆叠展示；点击进入具体配置。
   Widget _folderList(BuildContext context) {
-    if (_plans.isEmpty) return _emptyState();
+    if (_plans.isEmpty) return _emptyState(context);
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(
         12,
@@ -832,7 +836,7 @@ class _PowerEditorState extends State<_PowerEditor> {
               decoration: InputDecoration(
                 labelText: '自定义整机功耗',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
                 isDense: true,
                 suffixIcon: IconButton(
@@ -892,7 +896,11 @@ class _NameDialogState extends State<_NameDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        FilledButton(onPressed: _submit, child: const Text('确定')),
+        FilledButton(
+          onPressed: _submit,
+          style: capsuleButtonStyle(Theme.of(context), fullWidth: false),
+          child: const Text('确定'),
+        ),
       ],
     );
   }

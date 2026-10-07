@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../app_info.dart';
+import '../cloud/auth_service.dart';
+import '../cloud/cloud_sync.dart';
 import '../models/build_plan.dart';
 import '../storage/avatar_image_store.dart';
 import '../storage/background_image_store.dart';
@@ -14,6 +16,7 @@ import '../storage/build_plan_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 import '../utils/category_icons.dart';
+import 'account_page.dart';
 import 'build_plan_page.dart' show kBuildSlots;
 
 /// 「我的」页：个人信息 + 自定义背景 + 主题色 + 外观（深浅色）+ 关于。
@@ -65,7 +68,7 @@ class ProfilePage extends StatelessWidget {
           return ListView(
             padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
             children: [
-              _header(theme, context),
+              _accountCard(context, theme),
               const SizedBox(height: 16),
               _sectionTitle(theme, '背景'),
               _backgroundCard(theme, context),
@@ -88,47 +91,118 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _header(ThemeData theme, BuildContext context) {
+  /// 顶部卡片：头像 + 昵称 + 账号与云同步（登录/注册、上传头像、退出登录）合并为一块。
+  Widget _accountCard(BuildContext context, ThemeData theme) {
     final nickname = ThemeController.instance.nickname;
     final avatarPath = ThemeController.instance.avatarPath;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            _avatar(theme, context, avatarPath),
-            const SizedBox(width: 14),
-            Expanded(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(999),
-                onTap: () => _editNickname(context),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        nickname,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
+      child: Column(
+        children: [
+          // 头像 + 昵称
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                _avatar(theme, context, avatarPath),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: () => _editNickname(context),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nickname,
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '点击修改昵称',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '点击修改昵称',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: Colors.grey),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
+              ],
             ),
-            const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
-          ],
-        ),
+          ),
+          const Divider(height: 1),
+          // 账号与云同步区域
+          ListenableBuilder(
+            listenable: AuthService.instance,
+            builder: (context, _) {
+              final auth = AuthService.instance;
+              if (!auth.isLoggedIn) {
+                return ListTile(
+                  leading: const Icon(Icons.cloud_outlined),
+                  title: const Text('登录 / 注册'),
+                  subtitle: const Text('登录后把整机方案同步到云端'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AccountPage()),
+                  ),
+                );
+              }
+              return Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.cloud_done_outlined),
+                    title: const Text('账号已登录'),
+                    subtitle: Text(auth.username ?? ''),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.cloud_upload_outlined),
+                    title: const Text('上传头像到云'),
+                    subtitle: const Text('把本地头像备份到账号'),
+                    onTap: () => _uploadAvatar(context),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.logout),
+                    title: const Text('退出登录'),
+                    onTap: () => AuthService.instance.signOut(),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
+  }
+
+  /// 把本地头像图片上传到云存储并存入账号资料。
+  Future<void> _uploadAvatar(BuildContext context) async {
+    final path = ThemeController.instance.avatarPath;
+    if (path == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('还没有头像，先点头像从相册选一张')),
+      );
+      return;
+    }
+    try {
+      final bytes = await File(path).readAsBytes();
+      final ext = path.contains('.') ? path.split('.').last : 'jpg';
+      await CloudSync.uploadAvatar(bytes, ext);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('头像已上传到云')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   /// 头像：有自定义图片则显示图片，否则显示默认人形图标；点击更换，右下角相机小标提示。

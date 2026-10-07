@@ -20,6 +20,16 @@ class AvatarImageStore {
     return dest.path;
   }
 
+  /// 直接保存图片字节（从云端下载头像时用），返回落盘路径。
+  static Future<String> saveBytes(List<int> bytes, String ext) async {
+    final dir = await getApplicationDocumentsDirectory();
+    await _deleteExisting(dir);
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final dest = File('${dir.path}/$_prefix$stamp.$ext');
+    await dest.writeAsBytes(bytes);
+    return dest.path;
+  }
+
   /// 找到已保存的头像路径；没有则返回 null。
   static Future<String?> storedImagePath() async {
     final dir = await getApplicationDocumentsDirectory();

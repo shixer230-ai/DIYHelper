@@ -8,6 +8,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import 'cloud/auth_service.dart';
+import 'cloud/cloud_app.dart';
 import 'pages/home_shell.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
@@ -15,6 +17,10 @@ import 'theme/theme_controller.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ThemeController.instance.init();
+  // 初始化云开发（失败不阻塞启动，云功能在未就绪/未登录时给出提示即可）。
+  await CloudApp.init();
+  // 恢复云端登录会话（之前登录过且 token 未过期则自动登录）。
+  await AuthService.instance.restore();
   runApp(const DiyHelperApp());
 }
 

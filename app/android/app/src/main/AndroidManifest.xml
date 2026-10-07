@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 联网权限：云同步等联网功能需要（release 包默认不带，需在此显式声明）。 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="DIYHelper"
         android:name="${applicationName}"

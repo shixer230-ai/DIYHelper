@@ -3,6 +3,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../app_info.dart';
 import '../analysis/compat_check.dart';
+import '../cloud/auth_service.dart';
+import '../cloud/cloud_sync.dart';
 import '../analysis/value_index.dart';
 import '../data/hardware_catalog.dart';
 import '../models/build_plan.dart';
@@ -348,6 +350,42 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  /// 把当前方案手动上传到云。
+  Future<void> _uploadToCloud(BuildPlan plan) async {
+    if (!AuthService.instance.isLoggedIn) {
+      _snack('请先在「我的」页登录');
+      return;
+    }
+    try {
+      await CloudSync.uploadPlan(plan);
+      _snack('已上传「${_planName(plan)}」到云');
+    } catch (e) {
+      _snack(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  /// 从云拉取方案，按 id 去重后并入本地列表。
+  Future<void> _downloadFromCloud() async {
+    if (!AuthService.instance.isLoggedIn) {
+      _snack('请先在「我的」页登录');
+      return;
+    }
+    try {
+      final cloudPlans = await CloudSync.downloadPlans();
+      if (cloudPlans.isEmpty) {
+        _snack('云端还没有方案');
+        return;
+      }
+      final existing = _plans.map((p) => p.id).toSet();
+      final fresh = cloudPlans.where((p) => !existing.contains(p.id)).toList();
+      setState(() => _plans.addAll(fresh));
+      await _store.saveAll(_plans);
+      _snack(fresh.isEmpty ? '云端方案已在本地' : '已从云恢复 ${fresh.length} 个方案');
+    } catch (e) {
+      _snack(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
   /// 自动的 CPU+显卡 功耗（匹配不到返回 null）。
   double? _autoPower(BuildPlan plan) => totalPower(plan, _library);
 
@@ -433,6 +471,12 @@ class _BuildPlanPageState extends State<BuildPlanPage>
               onPressed: _createPlan,
               tooltip: '新建方案',
               icon: const Icon(Icons.add),
+            ),
+          if (plan == null)
+            IconButton(
+              onPressed: _downloadFromCloud,
+              tooltip: '从云恢复方案',
+              icon: const Icon(Icons.cloud_download_outlined),
             ),
           if (plan != null && plan.components.isNotEmpty)
             IconButton(
@@ -584,6 +628,13 @@ class _BuildPlanPageState extends State<BuildPlanPage>
           label: const Text('保存到我的清单'),
           // 与「加入我的清单」等主按钮统一：胶囊圆角 + 半透明底色。
           style: capsuleButtonStyle(theme),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: plan.components.isEmpty ? null : () => _uploadToCloud(plan),
+          icon: const Icon(Icons.cloud_upload_outlined),
+          label: const Text('上传此方案到云'),
+          style: capsuleOutlinedButtonStyle(theme),
         ),
       ],
     );

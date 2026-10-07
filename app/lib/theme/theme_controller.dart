@@ -82,6 +82,13 @@ class ThemeController extends ChangeNotifier {
     await _store.saveNickname(nickname);
   }
 
+  /// 登录/注册成功后：若本地昵称仍是默认值，则采用云端用户名。
+  /// 用户手动改过昵称则不覆盖，保留用户自己的选择。
+  Future<void> adoptNicknameIfDefault(String name) async {
+    if (_nickname != SettingsStore.defaultNickname) return;
+    await setNickname(name);
+  }
+
   /// 设置头像（图片已由 AvatarImageStore 存到本地，路径即持久化）。
   Future<void> setAvatar(String path) async {
     _avatarPath = path;

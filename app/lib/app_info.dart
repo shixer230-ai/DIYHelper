@@ -2,7 +2,7 @@
 // 版本号与署名在此统一维护，避免多处写死导致不一致。
 
 /// 当前对外版本号（显示在「我的」页）。
-const String kAppVersion = 'Beta 1.1.3';
+const String kAppVersion = 'Beta 1.2.0';
 
 /// 版本更新日志，最新的排在最前。
 class VersionLogEntry {
@@ -13,6 +13,11 @@ class VersionLogEntry {
 }
 
 const List<VersionLogEntry> kVersionLog = [
+  VersionLogEntry('Beta 1.2.0', [
+    '新增账号云同步：注册/登录（邮箱验证码），整机方案上传到云 / 从云恢复',
+    '头像上传到云，重装登录后自动下载回本地',
+    '「我的」页头像 + 昵称 + 账号同步合并为一张卡片，登录后昵称自动同步用户名',
+  ]),
   VersionLogEntry('Beta 1.1.3', [
     '修复液态玻璃着色器在 Impeller 下编译失败，底部导航恢复真实折射与高光',
     '整机方案空状态「新建方案」按钮、各弹窗操作按钮统一胶囊半透明样式',

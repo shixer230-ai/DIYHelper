@@ -2,7 +2,7 @@
 // 版本号与署名在此统一维护，避免多处写死导致不一致。
 
 /// 当前对外版本号（显示在「我的」页）。
-const String kAppVersion = 'Beta 1.2.0';
+const String kAppVersion = 'Beta 1.3.0';
 
 /// 版本更新日志，最新的排在最前。
 class VersionLogEntry {
@@ -13,6 +13,13 @@ class VersionLogEntry {
 }
 
 const List<VersionLogEntry> kVersionLog = [
+  VersionLogEntry('Beta 1.3.0', [
+    '云方案管理：删除方案本地+云端同步删除，上传按方案幂等覆盖，用户数据隔离（只操作自己的方案）',
+    '云方案防恶意占用：方案数量上限、数据校验、上传防连点',
+    '硬件库「自定义添加」支持选择品牌，我的添加按品牌堆叠分组',
+    '全部下拉/弹出菜单统一玻璃胶囊风格',
+    '整机方案文件夹图标改圆形，总金额右移放大突出',
+  ]),
   VersionLogEntry('Beta 1.2.0', [
     '新增账号云同步：注册/登录（邮箱验证码），整机方案上传到云 / 从云恢复',
     '头像上传到云，重装登录后自动下载回本地',

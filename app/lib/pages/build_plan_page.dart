@@ -55,6 +55,12 @@ class _BuildPlanPageState extends State<BuildPlanPage>
   String? _currentId;
   bool _loading = true;
 
+  // 上传防连点。
+  bool _uploading = false;
+
+  // 离线删除时没删掉的云端方案 id（墓碑），下次登录时补删。
+  Set<String> _pendingDeletes = {};
+
   // 硬件库（预置 + 我的添加），用于计算默认的 CPU+显卡 功耗。
   List<HardwareSpec> _library = [];
 
@@ -85,17 +91,23 @@ class _BuildPlanPageState extends State<BuildPlanPage>
   Future<void> _load() async {
     final plans = await _store.loadAll();
     final currentId = await _store.loadCurrentId();
+    final pending = await _store.loadPendingDeleteIds();
     final userSpecs = await UserSpecStore().loadAll();
     if (!mounted) return;
     setState(() {
       _plans = plans;
       _currentId = currentId;
+      _pendingDeletes = pending;
       _library = [...kHardwareCatalog, ...userSpecs];
       _loading = false;
     });
   }
 
   Future<void> _createPlan() async {
+    if (_plans.length >= CloudSync.kMaxCloudPlans) {
+      _snack('方案数量已达上限（${CloudSync.kMaxCloudPlans} 个）');
+      return;
+    }
     final name = await showDialog<String>(
       context: context,
       builder: (_) => _NameDialog(title: '新建方案', initial: _nextName(_plans)),
@@ -163,6 +175,23 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     });
     await _store.saveAll(_plans);
     await _store.saveCurrentId(_currentId);
+
+    // 无论如何先记墓碑：这个方案「本地已删，云端也不该再回来」。
+    // 墓碑要等下次恢复时确认云端真的没了才清除，防止云端删除刚提交、
+    // 读取还有短暂延迟时又把它拉回来。
+    _pendingDeletes.add(plan.id);
+    await _store.savePendingDeleteIds(_pendingDeletes);
+
+    if (!AuthService.instance.isLoggedIn) {
+      _snack('已删除「${_planName(plan)}」');
+      return;
+    }
+    try {
+      await CloudSync.deletePlan(plan.id);
+      _snack('已删除「${_planName(plan)}」（本地与云端）');
+    } catch (_) {
+      _snack('本地已删除；云端删除失败，稍后自动重试');
+    }
   }
 
   Future<void> _clearAll() async {
@@ -350,17 +379,26 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  /// 把当前方案手动上传到云。
+  /// 把当前方案手动上传到云（按方案 id 幂等覆盖）。
   Future<void> _uploadToCloud(BuildPlan plan) async {
     if (!AuthService.instance.isLoggedIn) {
       _snack('请先在「我的」页登录');
       return;
     }
+    if (_uploading) return;
+    setState(() => _uploading = true);
     try {
+      final count = await CloudSync.countPlans();
+      if (count >= CloudSync.kMaxCloudPlans) {
+        _snack('云端方案已达上限（${CloudSync.kMaxCloudPlans} 个）');
+        return;
+      }
       await CloudSync.uploadPlan(plan);
       _snack('已上传「${_planName(plan)}」到云');
     } catch (e) {
       _snack(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _uploading = false);
     }
   }
 
@@ -371,13 +409,31 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       return;
     }
     try {
+      // 先把墓碑里的方案尽力从云端删掉（真正删干净）。
+      for (final id in _pendingDeletes.toList()) {
+        try {
+          await CloudSync.deletePlan(id);
+        } catch (_) {
+          // 删不掉就留着墓碑，下面过滤时仍会挡掉它。
+        }
+      }
+
       final cloudPlans = await CloudSync.downloadPlans();
-      if (cloudPlans.isEmpty) {
+      final cloudIds = cloudPlans.map((p) => p.id).toSet();
+
+      // 墓碑里已经不在云端的（删干净了），从墓碑移除。
+      _pendingDeletes.removeWhere((id) => !cloudIds.contains(id));
+      await _store.savePendingDeleteIds(_pendingDeletes);
+
+      // 还在云端的墓碑方案（删不掉 / 删除还没生效）过滤掉，避免刚删的又冒出来。
+      final visible =
+          cloudPlans.where((p) => !_pendingDeletes.contains(p.id)).toList();
+      if (visible.isEmpty) {
         _snack('云端还没有方案');
         return;
       }
       final existing = _plans.map((p) => p.id).toSet();
-      final fresh = cloudPlans.where((p) => !existing.contains(p.id)).toList();
+      final fresh = visible.where((p) => !existing.contains(p.id)).toList();
       setState(() => _plans.addAll(fresh));
       await _store.saveAll(_plans);
       _snack(fresh.isEmpty ? '云端方案已在本地' : '已从云恢复 ${fresh.length} 个方案');
@@ -554,7 +610,8 @@ class _BuildPlanPageState extends State<BuildPlanPage>
                 decoration: BoxDecoration(
                   color:
                       theme.colorScheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  // 文件夹图标改为圆形。
+                  shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.folder,
@@ -578,11 +635,20 @@ class _BuildPlanPageState extends State<BuildPlanPage>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${plan.filledCount} 件 · ¥${_fmt(plan.total)}',
+                      '${plan.filledCount} 件',
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: Colors.grey),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // 总金额：放在最右侧（三个点左侧），放大突出。
+              Text(
+                '¥${_fmt(plan.total)}',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.primary,
                 ),
               ),
               PopupMenuButton<String>(
@@ -631,9 +697,11 @@ class _BuildPlanPageState extends State<BuildPlanPage>
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
-          onPressed: plan.components.isEmpty ? null : () => _uploadToCloud(plan),
+          onPressed: (plan.components.isEmpty || _uploading)
+              ? null
+              : () => _uploadToCloud(plan),
           icon: const Icon(Icons.cloud_upload_outlined),
-          label: const Text('上传此方案到云'),
+          label: Text(_uploading ? '上传中…' : '上传此方案到云'),
           style: capsuleOutlinedButtonStyle(theme),
         ),
       ],

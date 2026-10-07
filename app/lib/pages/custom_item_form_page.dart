@@ -70,9 +70,8 @@ class _CustomItemFormPageState extends State<CustomItemFormPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            DropdownButtonFormField<String>(
+            GlassDropdown<String>(
               initialValue: _category,
-              borderRadius: BorderRadius.circular(12),
               decoration: const InputDecoration(
                 labelText: '类别',
                 border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),

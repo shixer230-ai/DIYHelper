@@ -32,6 +32,9 @@ class AuthService extends ChangeNotifier {
   /// 云端头像（可能是 fileId 或临时链接）。
   String? get avatarUrl => _user?.userMetadata?.avatarUrl;
 
+  /// 当前登录用户的稳定 ID（云端方案归属 `owner` 用）。
+  String? get uid => _user?.id;
+
   /// 登录/注册/恢复会话后，若本地昵称仍是默认值则同步为云端用户名。
   void _adoptNickname() {
     final name = nickname;

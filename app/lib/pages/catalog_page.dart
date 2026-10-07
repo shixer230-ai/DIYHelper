@@ -226,6 +226,7 @@ class _CatalogPageState extends State<CatalogPage>
   }
 
   Widget _buildMineTab() {
+    final sections = _mineBrandSections();
     return ListView(
       padding: EdgeInsets.fromLTRB(
         12,
@@ -253,9 +254,31 @@ class _CatalogPageState extends State<CatalogPage>
         if (_userSpecs.isEmpty)
           _emptyMine(context)
         else
-          for (final s in _userSpecs) _specCard(context, s),
+          for (final sec in sections) ...[
+            _sectionHeader(sec.brand),
+            for (final s in sec.specs) _specCard(context, s),
+          ],
       ],
     );
+  }
+
+  /// 「我的添加」按品牌堆叠：主流品牌在前（跨品类去重），其余归「其它」。
+  List<({String brand, List<HardwareSpec> specs})> _mineBrandSections() {
+    final order = <String>[
+      for (final mains in kBrandGroups.values) ...mains,
+      '其它',
+    ];
+    final seen = <String>{};
+    final unique = order.where((b) => seen.add(b)).toList();
+    final sections = <({String brand, List<HardwareSpec> specs})>[];
+    for (final brand in unique) {
+      final list = _userSpecs
+          .where((s) => brandGroupOf(s.category, s.brand) == brand)
+          .toList()
+        ..sort((a, b) => a.model.compareTo(b.model));
+      if (list.isNotEmpty) sections.add((brand: brand, specs: list));
+    }
+    return sections;
   }
 
   Widget _buildCategoryTab(String category) {

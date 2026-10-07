@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../analysis/value_index.dart';
+import '../data/hardware_catalog.dart';
 import '../models/hardware_spec.dart';
 import '../storage/user_spec_store.dart';
 import '../theme/app_theme.dart';
@@ -17,12 +18,16 @@ class UserSpecFormPage extends StatefulWidget {
 
 class _UserSpecFormPageState extends State<UserSpecFormPage> {
   final _formKey = GlobalKey<FormState>();
-  final _brandController = TextEditingController();
   final _modelController = TextEditingController();
   final _store = UserSpecStore();
 
   String _category = _categories.first;
+  String _brand = '其它';
   bool _saving = false;
+
+  /// 当前品类可选的品牌：主流品牌 + 「其它」。
+  List<String> get _brandOptions =>
+      [...(kBrandGroups[_category] ?? const <String>[]), '其它'];
 
   final List<_EntryPair> _specPairs = [];
   final List<_EntryPair> _benchPairs = [];
@@ -42,11 +47,11 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     for (final item in kValueItems) {
       _valueControllers[item.label] = TextEditingController();
     }
+    _brand = _brandOptions.first;
   }
 
   @override
   void dispose() {
-    _brandController.dispose();
     _modelController.dispose();
     _powerController.dispose();
     for (final p in _specPairs) {
@@ -98,7 +103,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     final spec = HardwareSpec(
       id: 'user_${DateTime.now().microsecondsSinceEpoch}',
       category: _category,
-      brand: _brandController.text.trim(),
+      brand: _brand,
       model: _modelController.text.trim(),
       specs: [..._collect(_specPairs), ..._collectPower()],
       benchmarks: [..._collect(_benchPairs), ..._collectValueBenches()],
@@ -118,9 +123,8 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            DropdownButtonFormField<String>(
+            GlassDropdown<String>(
               initialValue: _category,
-              borderRadius: BorderRadius.circular(12),
               decoration: const InputDecoration(
                 labelText: '品类',
                 border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
@@ -128,7 +132,11 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
               items: _categories
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                   .toList(),
-              onChanged: (v) => setState(() => _category = v!),
+              onChanged: (v) => setState(() {
+                _category = v!;
+                // 换品类后，品牌重置为该品类的首个主流品牌。
+                _brand = _brandOptions.first;
+              }),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -142,13 +150,18 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
                   (v == null || v.trim().isEmpty) ? '请填写型号' : null,
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _brandController,
+            GlassDropdown<String>(
+              // 品类变化时用 key 重建，让品牌回退到该品类首个主流品牌。
+              key: ValueKey(_category),
+              initialValue: _brand,
               decoration: const InputDecoration(
                 labelText: '品牌',
-                hintText: '例如：Intel / 华硕',
                 border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
               ),
+              items: _brandOptions
+                  .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                  .toList(),
+              onChanged: (v) => setState(() => _brand = v!),
             ),
             const SizedBox(height: 24),
             _entryEditor(

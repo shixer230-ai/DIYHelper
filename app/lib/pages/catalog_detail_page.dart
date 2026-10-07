@@ -232,9 +232,8 @@ class _AddPriceDialogState extends State<_AddPriceDialog> {
               },
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
+            GlassDropdown<String>(
               initialValue: _platform,
-              borderRadius: BorderRadius.circular(12),
               decoration: const InputDecoration(labelText: '购买平台'),
               items: _platforms
                   .map((p) => DropdownMenuItem(value: p, child: Text(p)))

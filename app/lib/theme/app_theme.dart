@@ -87,6 +87,44 @@ class GlassField extends StatelessWidget {
   }
 }
 
+/// 玻璃风下拉框：展开菜单用表面色 + 胶囊圆角，替代原生下拉菜单的方角白底样式。
+/// 用法与 DropdownButtonFormField 一致，仅多一层统一的菜单外观。
+class GlassDropdown<T> extends StatelessWidget {
+  const GlassDropdown({
+    super.key,
+    required this.initialValue,
+    required this.items,
+    this.onChanged,
+    this.decoration,
+    this.menuMaxHeight = 360,
+  });
+
+  final T initialValue;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?>? onChanged;
+  final InputDecoration? decoration;
+  final double menuMaxHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DropdownButtonFormField<T>(
+      initialValue: initialValue,
+      items: items,
+      onChanged: onChanged,
+      isExpanded: true,
+      menuMaxHeight: menuMaxHeight,
+      dropdownColor: scheme.surface,
+      borderRadius: BorderRadius.circular(kCardRadius),
+      icon: Icon(
+        Icons.keyboard_arrow_down_rounded,
+        color: scheme.onSurfaceVariant,
+      ),
+      decoration: decoration,
+    );
+  }
+}
+
 /// 一个可选的预设主色。
 class SeedOption {
   const SeedOption(this.name, this.color);
@@ -245,6 +283,15 @@ ThemeData _base(ColorScheme scheme, bool transparentBackground) {
     dialogTheme: DialogThemeData(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(20)),
+      ),
+    ),
+    // 弹出菜单（PopupMenuButton / showMenu）统一胶囊圆角 + 表面色，去掉原生直角菜单。
+    popupMenuTheme: PopupMenuThemeData(
+      color: scheme.surface,
+      elevation: 4,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(kCardRadius),
       ),
     ),
     bottomSheetTheme: const BottomSheetThemeData(

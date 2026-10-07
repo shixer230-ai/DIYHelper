@@ -9,6 +9,7 @@ import '../utils/json_safe.dart';
 class BuildPlanStore {
   static const _plansKey = 'build_plans';
   static const _currentKey = 'build_plan_current_id';
+  static const _pendingKey = 'build_plan_pending_delete'; // 待补删云端的方案 id
   static const _legacyKey = 'build_plan'; // 旧版单个方案，迁移后删除
 
   Future<List<BuildPlan>> loadAll() async {
@@ -51,6 +52,32 @@ class BuildPlanStore {
       await prefs.remove(_currentKey);
     } else {
       await prefs.setString(_currentKey, id);
+    }
+  }
+
+  /// 读取「待补删云端」的方案 id（离线删除时记下的墓碑）。
+  Future<Set<String>> loadPendingDeleteIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_pendingKey);
+    if (raw == null || raw.isEmpty) return <String>{};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded.whereType<String>().toSet();
+      }
+    } catch (_) {
+      // 坏数据直接当空，不影响主流程。
+    }
+    return <String>{};
+  }
+
+  /// 保存「待补删云端」的方案 id 集合。
+  Future<void> savePendingDeleteIds(Set<String> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (ids.isEmpty) {
+      await prefs.remove(_pendingKey);
+    } else {
+      await prefs.setString(_pendingKey, jsonEncode(ids.toList()));
     }
   }
 }

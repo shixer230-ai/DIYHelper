@@ -187,11 +187,8 @@ class _AnalysisPageState extends State<AnalysisPage>
         children: [
           Expanded(
             child: GlassField(
-              child: DropdownButtonFormField<_Choice>(
+              child: GlassDropdown<_Choice>(
                 initialValue: _selectedChoice,
-                isExpanded: true,
-                // 展开的选择菜单仍用胶囊圆角。
-                borderRadius: BorderRadius.circular(kNavBarRadius),
                 decoration: const InputDecoration(
                   labelText: '分析项目',
                   prefixIcon: Icon(Icons.tune),

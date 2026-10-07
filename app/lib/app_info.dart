@@ -2,7 +2,7 @@
 // 版本号与署名在此统一维护，避免多处写死导致不一致。
 
 /// 当前对外版本号（显示在「我的」页）。
-const String kAppVersion = 'Beta 1.1.1';
+const String kAppVersion = 'Beta 1.1.2';
 
 /// 版本更新日志，最新的排在最前。
 class VersionLogEntry {
@@ -13,6 +13,13 @@ class VersionLogEntry {
 }
 
 const List<VersionLogEntry> kVersionLog = [
+  VersionLogEntry('Beta 1.1.2', [
+    '新增一键导入配置单：粘贴「导出配置单」文本即可还原整机方案',
+    '整机方案改为文件夹列表展示（单行堆叠），点击进入具体配置',
+    '手动填写型号 / 价格等输入框统一胶囊半透明样式',
+    '「保存成功」等提示统一胶囊半透明样式',
+    '各硬件品类图标改为圆形',
+  ]),
   VersionLogEntry('Beta 1.1.1', [
     '液态玻璃效果：底部导航 / 顶部分段 / 标题栏换用真实折射玻璃材质',
     '底部导航按压跟手、胶囊平滑移动',

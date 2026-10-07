@@ -116,11 +116,14 @@ class _CatalogPageState extends State<CatalogPage>
                 vertical: 8,
               ),
               indicator: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer
-                    .withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
+                // 与「我的硬件清单」分类选中色块一致：主题色半透明胶囊。
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(999),
               ),
-              labelColor: Theme.of(context).colorScheme.onPrimaryContainer,
+              labelColor: Theme.of(context).colorScheme.primary,
               unselectedLabelColor: Theme.of(context)
                   .colorScheme
                   .onSurfaceVariant,
@@ -148,28 +151,25 @@ class _CatalogPageState extends State<CatalogPage>
   Widget _searchBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: '搜索型号 / 品牌，如 i5、RTX 4070、Intel',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searching
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  tooltip: '清空',
-                  onPressed: _searchController.clear,
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
+      child: GlassField(
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _searching
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    tooltip: '清空',
+                    onPressed: _searchController.clear,
+                  )
+                : null,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            filled: false,
+            // 去掉 isDense，用显式上下内边距让输入文字在玻璃框内垂直居中。
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
-          ),
-          isDense: true,
         ),
       ),
     );

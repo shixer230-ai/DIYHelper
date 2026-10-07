@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/custom_item.dart';
+import '../theme/app_theme.dart';
 
 const _categories = ['游戏', '工程项目', '其它'];
 
@@ -107,9 +108,8 @@ class _CustomItemFormPageState extends State<CustomItemFormPage> {
             const SizedBox(height: 32),
             FilledButton(
               onPressed: _save,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
+              // 与「保存到我的添加」等主按钮统一：胶囊圆角 + 半透明材质。
+              style: capsuleButtonStyle(Theme.of(context)),
               child: const Text('保存'),
             ),
           ],

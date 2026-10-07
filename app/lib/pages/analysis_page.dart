@@ -186,33 +186,30 @@ class _AnalysisPageState extends State<AnalysisPage>
       child: Row(
         children: [
           Expanded(
-            child: DropdownButtonFormField<_Choice>(
-              initialValue: _selectedChoice,
-              isExpanded: true,
-              // 展开的选择菜单与输入框统一用胶囊圆角，和底部导航一致。
-              borderRadius: BorderRadius.circular(kNavBarRadius),
-              decoration: const InputDecoration(
-                labelText: '分析项目',
-                prefixIcon: Icon(Icons.tune),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
+            child: GlassField(
+              child: DropdownButtonFormField<_Choice>(
+                initialValue: _selectedChoice,
+                isExpanded: true,
+                // 展开的选择菜单仍用胶囊圆角。
+                borderRadius: BorderRadius.circular(kNavBarRadius),
+                decoration: const InputDecoration(
+                  labelText: '分析项目',
+                  prefixIcon: Icon(Icons.tune),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  isDense: true,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(kNavBarRadius)),
-                ),
-                isDense: true,
+                items: [
+                  for (final c in _choices)
+                    DropdownMenuItem(
+                      value: c,
+                      child: Text(c.label, overflow: TextOverflow.ellipsis),
+                    ),
+                ],
+                onChanged: _onChoiceChanged,
               ),
-              items: [
-                for (final c in _choices)
-                  DropdownMenuItem(
-                    value: c,
-                    child: Text(c.label, overflow: TextOverflow.ellipsis),
-                  ),
-              ],
-              onChanged: _onChoiceChanged,
             ),
           ),
           IconButton(

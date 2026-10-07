@@ -60,10 +60,11 @@ class _BuildPlanPageState extends State<BuildPlanPage>
   bool get wantKeepAlive => true;
 
   BuildPlan? get _current {
+    if (_currentId == null) return null;
     for (final p in _plans) {
       if (p.id == _currentId) return p;
     }
-    return _plans.isEmpty ? null : _plans.first;
+    return null;
   }
 
   @override
@@ -107,12 +108,59 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     await _store.saveCurrentId(plan.id);
   }
 
-  Future<void> _openPlans() async {
-    await showModalBottomSheet<void>(
+  Future<void> _openPlan(BuildPlan plan) async {
+    setState(() => _currentId = plan.id);
+    await _store.saveCurrentId(plan.id);
+  }
+
+  Future<void> _backToList() async {
+    setState(() => _currentId = null);
+    await _store.saveCurrentId(null);
+  }
+
+  Future<void> _rename(BuildPlan plan) async {
+    final name = await showDialog<String>(
       context: context,
-      builder: (_) => const _PlansSheet(),
+      builder: (_) => _NameDialog(title: '重命名', initial: plan.name),
     );
-    await _load();
+    if (name == null) return;
+    setState(() {
+      final i = _plans.indexWhere((p) => p.id == plan.id);
+      _plans[i] = BuildPlan(
+        id: plan.id,
+        name: name,
+        components: plan.components,
+        customPower: plan.customPower,
+      );
+    });
+    await _store.saveAll(_plans);
+  }
+
+  Future<void> _delete(BuildPlan plan) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除方案'),
+        content: Text('确定删除「${_planName(plan)}」吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() {
+      _plans.removeWhere((p) => p.id == plan.id);
+      if (_currentId == plan.id) _currentId = null;
+    });
+    await _store.saveAll(_plans);
+    await _store.saveCurrentId(_currentId);
   }
 
   Future<void> _clearAll() async {
@@ -369,18 +417,22 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     final plan = _current;
     return Scaffold(
       appBar: AppBar(
+        // 编辑态显示返回按钮（回到文件夹列表）；列表态不显示。
+        leading: plan == null
+            ? null
+            : IconButton(
+                onPressed: _backToList,
+                tooltip: '返回方案列表',
+                icon: const Icon(Icons.arrow_back),
+              ),
         title: plan == null ? const Text('整机方案') : _planTitle(context, plan),
         actions: [
-          IconButton(
-            onPressed: _createPlan,
-            tooltip: '新建方案',
-            icon: const Icon(Icons.add),
-          ),
-          IconButton(
-            onPressed: _openPlans,
-            tooltip: '我的方案',
-            icon: const Icon(Icons.folder_copy_outlined),
-          ),
+          if (plan == null)
+            IconButton(
+              onPressed: _createPlan,
+              tooltip: '新建方案',
+              icon: const Icon(Icons.add),
+            ),
           if (plan != null && plan.components.isNotEmpty)
             IconButton(
               onPressed: _clearAll,
@@ -392,7 +444,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : plan == null
-          ? _emptyState()
+          ? _folderList(context)
           : _planBody(plan),
     );
   }
@@ -421,6 +473,89 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     );
   }
 
+  /// 文件夹视图：每个整机方案一行，纵向堆叠展示；点击进入具体配置。
+  Widget _folderList(BuildContext context) {
+    if (_plans.isEmpty) return _emptyState();
+    return ListView.builder(
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        12 + bottomNavClearance(context),
+      ),
+      itemCount: _plans.length,
+      itemBuilder: (context, i) => _folderCard(context, _plans[i]),
+    );
+  }
+
+  Widget _folderCard(BuildContext context, BuildPlan plan) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(kCardRadius),
+        onTap: () => _openPlan(plan),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color:
+                      theme.colorScheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.folder,
+                  color: theme.colorScheme.primary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _planName(plan),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${plan.filledCount} 件 · ¥${_fmt(plan.total)}',
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: '更多',
+                onSelected: (v) {
+                  if (v == 'rename') _rename(plan);
+                  if (v == 'delete') _delete(plan);
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'rename', child: Text('重命名')),
+                  PopupMenuItem(value: 'delete', child: Text('删除')),
+                ],
+                icon: const Icon(Icons.more_vert),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _planBody(BuildPlan plan) {
     final theme = Theme.of(context);
     final filled = kBuildSlots.where((s) => plan[s.key] != null).length;
@@ -436,11 +571,6 @@ class _BuildPlanPageState extends State<BuildPlanPage>
         _compatCard(theme, plan),
         const SizedBox(height: 4),
         for (final slot in kBuildSlots) _slotCard(theme, slot, plan),
-        const SizedBox(height: 8),
-        Text(
-          '显卡、机箱为可选（用核显可不加显卡）；其余为必选。',
-          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-        ),
         const SizedBox(height: 12),
         _powerCard(plan),
         const SizedBox(height: 16),
@@ -672,7 +802,6 @@ class _PowerEditorState extends State<_PowerEditor> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final auto = widget.autoPower;
     return Card(
       // 和其它卡片一样贴满宽度，避免默认 4px 外边距让功耗卡变窄。
       margin: const EdgeInsets.only(bottom: 8),
@@ -693,13 +822,6 @@ class _PowerEditorState extends State<_PowerEditor> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              auto == null
-                  ? '自动计算：CPU+显卡 功耗未匹配到硬件库'
-                  : '自动计算：CPU+显卡 约 ${_fmt(auto)} W',
-              style: theme.textTheme.bodySmall,
-            ),
             const SizedBox(height: 12),
             TextField(
               controller: _c,
@@ -708,9 +830,7 @@ class _PowerEditorState extends State<_PowerEditor> {
               ),
               onSubmitted: _submit,
               decoration: InputDecoration(
-                labelText: '自定义整机功耗（可选）',
-                hintText: auto == null ? '如：550' : '不低于 ${_fmt(auto)} W',
-                helperText: '仅计算cpu+显卡功耗（用户自定义除外）',
+                labelText: '自定义整机功耗',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                 ),
@@ -778,189 +898,3 @@ class _NameDialogState extends State<_NameDialog> {
   }
 }
 
-/// 方案列表：切换 / 重命名 / 删除 / 新建。
-class _PlansSheet extends StatefulWidget {
-  const _PlansSheet();
-
-  @override
-  State<_PlansSheet> createState() => _PlansSheetState();
-}
-
-class _PlansSheetState extends State<_PlansSheet> {
-  final _store = BuildPlanStore();
-  List<BuildPlan> _plans = [];
-  String? _currentId;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final plans = await _store.loadAll();
-    final currentId = await _store.loadCurrentId();
-    if (!mounted) return;
-    setState(() {
-      _plans = plans;
-      _currentId = currentId;
-      _loading = false;
-    });
-  }
-
-  Future<void> _create() async {
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => _NameDialog(title: '新建方案', initial: _nextName(_plans)),
-    );
-    if (name == null) return;
-    final plan = BuildPlan(name: name);
-    setState(() {
-      _plans.add(plan);
-      _currentId = plan.id;
-    });
-    await _store.saveAll(_plans);
-    await _store.saveCurrentId(plan.id);
-  }
-
-  Future<void> _rename(BuildPlan plan) async {
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => _NameDialog(title: '重命名', initial: plan.name),
-    );
-    if (name == null) return;
-    setState(() {
-      final i = _plans.indexWhere((p) => p.id == plan.id);
-      _plans[i] = BuildPlan(
-        id: plan.id,
-        name: name,
-        components: plan.components,
-        customPower: plan.customPower,
-      );
-    });
-    await _store.saveAll(_plans);
-  }
-
-  Future<void> _delete(BuildPlan plan) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除方案'),
-        content: Text('确定删除「${_planName(plan)}」吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    setState(() {
-      _plans.removeWhere((p) => p.id == plan.id);
-      if (_currentId == plan.id) {
-        _currentId = _plans.isEmpty ? null : _plans.first.id;
-      }
-    });
-    await _store.saveAll(_plans);
-    await _store.saveCurrentId(_currentId);
-  }
-
-  Future<void> _select(BuildPlan plan) async {
-    await _store.saveCurrentId(plan.id);
-    if (!mounted) return;
-    Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Text(
-                  '我的方案',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: _create,
-                  icon: const Icon(Icons.add),
-                  label: const Text('新建'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Flexible(child: _body(theme)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _body(ThemeData theme) {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (_plans.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          '还没有方案，点右上角「新建」创建一个',
-          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-        ),
-      );
-    }
-    return ListView(
-      shrinkWrap: true,
-      children: [for (final plan in _plans) _row(theme, plan)],
-    );
-  }
-
-  Widget _row(ThemeData theme, BuildPlan plan) {
-    final selected = plan.id == _currentId;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: const CategoryBadge(category: '整机方案'),
-      title: Text(_planName(plan)),
-      subtitle: Text('${plan.filledCount} 件 · ¥${_fmt(plan.total)}'),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (selected)
-            Icon(
-              Icons.check_circle,
-              color: theme.colorScheme.primary,
-              size: 20,
-            ),
-          IconButton(
-            onPressed: () => _rename(plan),
-            tooltip: '重命名',
-            icon: const Icon(Icons.edit_outlined, size: 20),
-          ),
-          IconButton(
-            onPressed: () => _delete(plan),
-            tooltip: '删除',
-            icon: const Icon(Icons.delete_outline, size: 20),
-          ),
-        ],
-      ),
-      onTap: () => _select(plan),
-    );
-  }
-}

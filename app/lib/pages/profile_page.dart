@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
@@ -300,6 +301,13 @@ class ProfilePage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _exportConfig(context),
           ),
+          ListTile(
+            leading: const Icon(Icons.download),
+            title: const Text('导入配置单'),
+            subtitle: const Text('粘贴「导出配置单」生成的文本，一键还原成方案'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _importConfig(context),
+          ),
         ],
       ),
     );
@@ -322,7 +330,48 @@ class ProfilePage extends StatelessWidget {
     if (plan == null || !context.mounted) return;
     final name = _planName(plan);
     await SharePlus.instance.share(
-      ShareParams(text: _configText(plan), subject: '$name 配置单'),
+      ShareParams(text: configText(plan), subject: '$name 配置单'),
+    );
+  }
+
+  /// 一键导入配置单：读取剪贴板里的配置单文本（可手动粘贴修改），
+  /// 解析后还原成一个新的整机方案，与「导出配置单」的格式保持一致。
+  Future<void> _importConfig(BuildContext context) async {
+    String initial = '';
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      initial = data?.text ?? '';
+    } catch (_) {
+      // 剪贴板读取失败就留空，让用户手动粘贴。
+    }
+    if (!context.mounted) return;
+    final text = await showDialog<String>(
+      context: context,
+      builder: (_) => _ImportDialog(initialText: initial),
+    );
+    if (text == null || !context.mounted) return;
+    final parsed = parseConfig(text);
+    if (parsed == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('没识别到配置单内容，请粘贴「导出配置单」生成的文本')),
+      );
+      return;
+    }
+    final store = BuildPlanStore();
+    final plans = await store.loadAll();
+    // 与已有方案重名时追加序号，避免列表里混淆。
+    var name = parsed.name;
+    var n = 2;
+    while (plans.any((p) => p.name == name)) {
+      name = '${parsed.name} $n';
+      n++;
+    }
+    final plan = BuildPlan(name: name, components: parsed.components);
+    plans.add(plan);
+    await store.saveAll(plans);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已导入「$name」')),
     );
   }
 
@@ -551,7 +600,7 @@ String _fmt(double p) =>
     p == p.roundToDouble() ? p.toStringAsFixed(0) : p.toStringAsFixed(2);
 
 /// 把单个整机方案排版成纯文本配置单。
-String _configText(BuildPlan plan) {
+String configText(BuildPlan plan) {
   final buf = StringBuffer();
   buf.writeln('【DIYHelper 配置单】${_planName(plan)}');
   buf.writeln('──────────────');
@@ -565,4 +614,106 @@ String _configText(BuildPlan plan) {
   buf.writeln('总价：¥${_fmt(plan.total)}');
   buf.writeln('—— 来自 DIYHelper ——');
   return buf.toString();
+}
+
+/// 解析「导出配置单」生成的文本，还原成整机方案；识别不到任何配件时返回 null。
+/// 格式与 [configText] 保持一致：方案名从头部读取，配件行按槽位标签 + 型号 + 品牌 + 价格解析。
+BuildPlan? parseConfig(String text) {
+  final lines = text.split('\n').map((e) => e.trim()).toList();
+
+  String name = '';
+  const marker = '【DIYHelper 配置单】';
+  for (final l in lines) {
+    final i = l.indexOf(marker);
+    if (i >= 0) {
+      name = l.substring(i + marker.length).trim();
+      break;
+    }
+  }
+  if (name.isEmpty) name = '导入的方案';
+
+  final components = <String, PlanComponent>{};
+  for (final slot in kBuildSlots) {
+    for (final l in lines) {
+      final prefix = '${slot.label} ';
+      if (!l.startsWith(prefix)) continue;
+      final rest = l.substring(prefix.length).trim();
+      if (rest.isEmpty) break;
+
+      final yen = rest.lastIndexOf('¥');
+      var modelBrand = rest;
+      var price = 0.0;
+      if (yen >= 0) {
+        price = double.tryParse(rest.substring(yen + 1).trim()) ?? 0;
+        modelBrand = rest.substring(0, yen).trim();
+      }
+      final parts = modelBrand.split('·');
+      final model = parts.first.trim();
+      final brand = parts.length > 1 ? parts[1].trim() : '';
+      if (model.isEmpty) break;
+
+      components[slot.key] = PlanComponent(
+        category: slot.category,
+        brand: brand,
+        model: model,
+        price: price,
+        platform: '',
+      );
+      break;
+    }
+  }
+
+  if (components.isEmpty) return null;
+  return BuildPlan(name: name, components: components);
+}
+
+/// 粘贴配置单文本的对话框；打开时自动填充剪贴板内容。
+class _ImportDialog extends StatefulWidget {
+  const _ImportDialog({required this.initialText});
+
+  final String initialText;
+
+  @override
+  State<_ImportDialog> createState() => _ImportDialogState();
+}
+
+class _ImportDialogState extends State<_ImportDialog> {
+  late final TextEditingController _c =
+      TextEditingController(text: widget.initialText);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final t = _c.text.trim();
+    if (t.isEmpty) return;
+    Navigator.pop(context, t);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('导入配置单'),
+      content: TextField(
+        controller: _c,
+        minLines: 6,
+        maxLines: 10,
+        decoration: const InputDecoration(
+          labelText: '配置单文本',
+          hintText: '自动读取剪贴板，也可长按粘贴',
+          alignLabelWithHint: true,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('导入')),
+      ],
+    );
+  }
 }

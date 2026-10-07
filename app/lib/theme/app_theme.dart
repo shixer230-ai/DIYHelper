@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 /// 预设主题色（用户可在「我的」页一键切换）。
@@ -31,6 +33,40 @@ ButtonStyle capsuleButtonStyle(ThemeData theme) {
     disabledBackgroundColor: scheme.surface.withValues(alpha: 0.3),
     disabledForegroundColor: scheme.onSurface.withValues(alpha: 0.4),
   );
+}
+
+/// 玻璃风格输入框外壳：半透明磨砂底色 + 细边框，配合 BackdropFilter 模糊，
+/// 用于搜索框 / 选择框，与底部液态玻璃导航的「玻璃」质感保持一致。
+class GlassField extends StatelessWidget {
+  const GlassField({
+    super.key,
+    required this.child,
+    this.radius = kNavBarRadius,
+  });
+
+  final Widget child;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.surface.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 /// 一个可选的预设主色。
@@ -181,8 +217,11 @@ ThemeData _base(ColorScheme scheme, bool transparentBackground) {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
+      // 与卡片 / 主按钮统一：胶囊圆角 + 半透明底色，「保存成功」等提示观感一致。
+      backgroundColor: scheme.surface.withValues(alpha: 0.6),
+      contentTextStyle: TextStyle(color: scheme.onSurface),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(12)),
+        borderRadius: BorderRadius.all(Radius.circular(kCardRadius)),
       ),
     ),
     dialogTheme: DialogThemeData(

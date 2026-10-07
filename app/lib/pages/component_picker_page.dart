@@ -6,6 +6,7 @@ import '../models/hardware_item.dart';
 import '../models/hardware_spec.dart';
 import '../storage/hardware_store.dart';
 import '../storage/user_spec_store.dart';
+import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
 
 /// 为整机方案某个槽位选择配件：可从硬件库选、从清单里选，或手动填价格。
@@ -198,7 +199,6 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: '搜索型号 / 品牌，如 i5、RTX 4070',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: _searching
               ? IconButton(
@@ -318,6 +318,23 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
   }
 }
 
+/// 手动填写 / 填价弹窗里的输入框：与全站统一为胶囊圆角 + 半透明底色。
+InputDecoration _glassFieldDeco(BuildContext context, String label) {
+  final scheme = Theme.of(context).colorScheme;
+  OutlineInputBorder border(Color c) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(kCardRadius),
+        borderSide: BorderSide(color: c),
+      );
+  return InputDecoration(
+    labelText: label,
+    filled: true,
+    fillColor: scheme.surface.withValues(alpha: 0.4),
+    border: border(scheme.outlineVariant.withValues(alpha: 0.5)),
+    enabledBorder: border(scheme.outlineVariant.withValues(alpha: 0.5)),
+    focusedBorder: border(scheme.primary),
+  );
+}
+
 /// 从硬件库选型号时，填写价格（返回价格）。
 class _SpecPriceDialog extends StatefulWidget {
   const _SpecPriceDialog({required this.spec});
@@ -353,7 +370,7 @@ class _SpecPriceDialogState extends State<_SpecPriceDialog> {
           controller: _price,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: '价格（元）*'),
+          decoration: _glassFieldDeco(context, '价格（元）*'),
           validator: (v) {
             final t = v?.trim() ?? '';
             if (t.isEmpty) return '请填写价格';
@@ -416,21 +433,21 @@ class _ManualEntryDialogState extends State<_ManualEntryDialog> {
             TextFormField(
               controller: _model,
               autofocus: true,
-              decoration: const InputDecoration(labelText: '型号 *'),
+              decoration: _glassFieldDeco(context, '型号 *'),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? '请填写型号' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _brand,
-              decoration: const InputDecoration(labelText: '品牌'),
+              decoration: _glassFieldDeco(context, '品牌'),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _price,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: '价格（元）*'),
+              decoration: _glassFieldDeco(context, '价格（元）*'),
               validator: (v) {
                 final t = v?.trim() ?? '';
                 if (t.isEmpty) return '请填写价格';

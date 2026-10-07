@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../analysis/value_index.dart';
 import '../models/hardware_spec.dart';
 import '../storage/user_spec_store.dart';
+import '../theme/app_theme.dart';
 
 const _categories = ['CPU', '主板', '显卡', '内存', '硬盘', '电源', '机箱', '其他'];
 
@@ -172,9 +173,8 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
             const SizedBox(height: 32),
             FilledButton(
               onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
+              // 胶囊 + 半透明材质，和清单页「保存」等主按钮保持一致。
+              style: capsuleButtonStyle(Theme.of(context)),
               child: const Text('保存到「我的添加」'),
             ),
           ],

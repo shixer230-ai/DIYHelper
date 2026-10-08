@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../analysis/value_index.dart';
+import '../models/build_plan.dart';
 import '../models/hardware_item.dart';
 import '../models/hardware_spec.dart';
 import '../storage/hardware_store.dart';
@@ -126,96 +127,97 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            GlassDropdown<String>(
-              initialValue: _category,
-              decoration: InputDecoration(
-                labelText: '品类',
-                helperText: _categoryLocked ? '已锁定为当前分类' : null,
-                border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(999)),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Column(
+                  children: [
+                    GlassDropdown<String>(
+                      initialValue: _category,
+                      decoration: InputDecoration(
+                        labelText: '品类',
+                        helperText: _categoryLocked ? '已锁定为当前分类' : null,
+                        border: InputBorder.none,
+                      ),
+                      items: _categories
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                      onChanged: _categoryLocked
+                          ? null
+                          : (v) => setState(() => _category = v!),
+                    ),
+                    const Divider(height: 1),
+                    TextFormField(
+                      controller: _modelController,
+                      decoration: const InputDecoration(
+                        labelText: '型号 *',
+                        hintText: '例如：i5-13600KF',
+                        border: InputBorder.none,
+                      ),
+                      validator: (v) =>
+                          (v == null || v.trim().isEmpty) ? '请填写型号' : null,
+                    ),
+                    const Divider(height: 1),
+                    TextFormField(
+                      controller: _brandController,
+                      decoration: const InputDecoration(
+                        labelText: '品牌',
+                        hintText: '例如：Intel / 华硕',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    TextFormField(
+                      controller: _priceController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: '价格（元）*',
+                        hintText: '例如：1399',
+                        border: InputBorder.none,
+                      ),
+                      validator: (v) {
+                        final t = v?.trim() ?? '';
+                        if (t.isEmpty) return '请填写价格';
+                        final n = double.tryParse(t);
+                        if (n == null || n <= 0) return '价格格式不对';
+                        if (n > kMaxPrice) return '价格不能超过 $kMaxPrice';
+                        return null;
+                      },
+                    ),
+                    const Divider(height: 1),
+                    GlassDropdown<String>(
+                      initialValue: _platform,
+                      decoration: const InputDecoration(
+                        labelText: '购买平台',
+                        border: InputBorder.none,
+                      ),
+                      items: _platforms
+                          .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _platform = v!),
+                    ),
+                    const Divider(height: 1),
+                    TextFormField(
+                      controller: _specController,
+                      decoration: const InputDecoration(
+                        labelText: '参数备注',
+                        hintText: '例如：LGA1700 / DDR5',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                    if (_valueItems.isNotEmpty) ...[
+                      const Divider(height: 1),
+                      _valueBenchEditor(),
+                    ],
+                  ],
                 ),
               ),
-              items: _categories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-              onChanged: _categoryLocked
-                  ? null
-                  : (v) => setState(() => _category = v!),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _modelController,
-              decoration: const InputDecoration(
-                labelText: '型号 *',
-                hintText: '例如：i5-13600KF',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(999)),
-                ),
-              ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? '请填写型号' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _brandController,
-              decoration: const InputDecoration(
-                labelText: '品牌',
-                hintText: '例如：Intel / 华硕',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(999)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _priceController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: '价格（元）*',
-                hintText: '例如：1399',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(999)),
-                ),
-              ),
-              validator: (v) {
-                final t = v?.trim() ?? '';
-                if (t.isEmpty) return '请填写价格';
-                final n = double.tryParse(t);
-                if (n == null || n <= 0) return '价格格式不对';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            GlassDropdown<String>(
-              initialValue: _platform,
-              decoration: const InputDecoration(
-                labelText: '购买平台',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(999)),
-                ),
-              ),
-              items: _platforms
-                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                  .toList(),
-              onChanged: (v) => setState(() => _platform = v!),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _specController,
-              decoration: const InputDecoration(
-                labelText: '参数备注',
-                hintText: '例如：LGA1700 / DDR5',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(999)),
-                ),
-              ),
-            ),
-            if (_valueItems.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              _valueBenchEditor(),
-            ],
-            const SizedBox(height: 24),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _syncToMine,
@@ -223,7 +225,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
               title: const Text('同时添加到硬件库「我的添加」'),
               subtitle: const Text('开启后，这个型号也能在硬件库和整机方案里选到'),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
             FilledButton(
               onPressed: _saving ? null : _save,
               // 与「保存到我的添加」等主按钮统一：胶囊圆角 + 半透明玻璃底色。
@@ -250,7 +252,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
           ),
         ),
         Text(
-          '填了性能分，这个型号就能参与「分析」页的性价比排行；不填可跳过。',
+          '填了性能分，这个型号就能参与「分析」页的性价比排行；不填可跳过',
           style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
         ),
         const SizedBox(height: 8),
@@ -262,9 +264,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
               decoration: InputDecoration(
                 labelText: item.label,
                 hintText: '如：约 10500',
-                border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(999)),
-                ),
+                border: InputBorder.none,
                 isDense: true,
               ),
             ),

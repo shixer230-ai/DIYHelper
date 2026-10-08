@@ -45,6 +45,9 @@ class ProfilePage extends StatelessWidget {
     final path = await AvatarImageStore.saveImage(file);
     if (!context.mounted) return;
     await ThemeController.instance.setAvatar(path);
+    // 已登录则自动把新头像上传到云（尽力而为，不打断本地流程）。
+    if (!context.mounted) return;
+    if (AuthService.instance.isLoggedIn) _uploadAvatar(context);
   }
 
   Future<void> _editNickname(BuildContext context) async {
@@ -161,12 +164,6 @@ class ProfilePage extends StatelessWidget {
                     subtitle: Text(auth.username ?? ''),
                   ),
                   ListTile(
-                    leading: const Icon(Icons.cloud_upload_outlined),
-                    title: const Text('上传头像到云'),
-                    subtitle: const Text('把本地头像备份到账号'),
-                    onTap: () => _uploadAvatar(context),
-                  ),
-                  ListTile(
                     leading: const Icon(Icons.logout),
                     title: const Text('退出登录'),
                     onTap: () => AuthService.instance.signOut(),
@@ -250,18 +247,6 @@ class ProfilePage extends StatelessWidget {
     return Card(
       child: Column(
         children: [
-          if (hasBg)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(kCardRadius),
-                child: SizedBox(
-                  height: 140,
-                  width: double.infinity,
-                  child: Image.file(File(path), fit: BoxFit.cover),
-                ),
-              ),
-            ),
           ListTile(
             leading: const Icon(LucideIcons.image),
             title: Text(hasBg ? '更换背景图片' : '上传背景图片'),
@@ -467,7 +452,7 @@ class ProfilePage extends StatelessWidget {
           const ListTile(
             leading: Icon(Icons.widgets_outlined),
             title: Text('DIY 硬件性价比助手'),
-            subtitle: Text('帮你从 CPU / 显卡到整机方案，挑出最划算的配置。'),
+            subtitle: Text('帮你从 CPU / 显卡到整机方案，挑出最划算的配置'),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),

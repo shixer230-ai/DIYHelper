@@ -1,5 +1,8 @@
 import '../utils/json_safe.dart';
 
+/// 单个配件价格的上限（元）。超过此值视为异常输入，提示用户重新输入。
+const double kMaxPrice = 8388608;
+
 /// 整机方案里的一个配件（含价格）。
 class PlanComponent {
   final String category;

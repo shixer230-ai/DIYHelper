@@ -125,42 +125,60 @@ class _HardwareListPageState extends State<HardwareListPage>
     super.build(context);
     final scheme = Theme.of(context).colorScheme;
     final currentCategory = _categories[_currentIndex];
-    // 标题栏总高度（状态栏 + 工具栏 + 分类 TabBar），内容预留顶部间距以延伸到标题栏下方。
-    final topInset =
-        MediaQuery.paddingOf(context).top + kToolbarHeight + kTextTabBarHeight;
     return Scaffold(
-      // 内容延伸到标题栏下方、标题栏悬浮其上（与底部导航栏逻辑一致），
-      // 标题栏全透明，不再遮挡主题内容。
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: Text(_items.isEmpty ? '我的硬件清单' : '我的硬件清单（${_items.length}）'),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
-          indicatorSize: TabBarIndicatorSize.tab,
-          indicatorPadding: const EdgeInsets.symmetric(
-            horizontal: 4,
-            vertical: 8,
-          ),
-          indicator: BoxDecoration(
-            // 选中分类的主题色块：胶囊形 + 半透明主题色（和右下角 + 按钮风格一致）。
-            color: scheme.primary.withValues(alpha: 0.16),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          labelColor: scheme.primary,
-          unselectedLabelColor: scheme.onSurfaceVariant,
-          dividerColor: Colors.transparent,
-          tabs: [for (final c in _categories) Tab(text: c)],
-        ),
-      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [for (final c in _categories) _categoryTab(c, topInset)],
+          : NestedScrollView(
+              // 上滑时标题 + 分类标签随内容一起滚走（淡出），不再悬浮分割观感。
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                SliverAppBar(
+                  pinned: false,
+                  floating: false,
+                  backgroundColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  title: Text(
+                    _items.isEmpty
+                        ? '我的硬件清单'
+                        : '我的硬件清单（${_items.length}）',
+                  ),
+                  bottom: PreferredSize(
+                    preferredSize: const Size.fromHeight(kTextTabBarHeight + 8),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      // 分类标签用磨砂玻璃胶囊包裹，与底部导航的液态玻璃观感一致。
+                      child: GlassField(
+                        radius: 24,
+                        child: TabBar(
+                          controller: _tabController,
+                          isScrollable: true,
+                          tabAlignment: TabAlignment.start,
+                          // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          indicatorPadding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 8,
+                          ),
+                          indicator: BoxDecoration(
+                            // 选中分类的主题色块：胶囊形 + 半透明主题色（和右下角 + 按钮风格一致）。
+                            color: scheme.primary.withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          labelColor: scheme.primary,
+                          unselectedLabelColor: scheme.onSurfaceVariant,
+                          dividerColor: Colors.transparent,
+                          tabs: [for (final c in _categories) Tab(text: c)],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              body: TabBarView(
+                controller: _tabController,
+                children: [for (final c in _categories) _categoryTab(c)],
+              ),
             ),
       // 「整机方案」由整机方案页生成，不能手动添加，故隐藏右下角 +。
       floatingActionButton: currentCategory == '整机方案'
@@ -181,13 +199,17 @@ class _HardwareListPageState extends State<HardwareListPage>
     );
   }
 
-  Widget _categoryTab(String category, double topInset) {
+  Widget _categoryTab(String category) {
     final items = _items.where((e) => e.category == category).toList();
-    if (items.isEmpty) return _emptyCategory(category, topInset);
+    if (items.isEmpty) return _emptyCategory(category);
     return ListView.builder(
+      // 回弹效果：超出可滚动范围时橡皮筋回弹（AlwaysScrollable 保证短列表也能滚）。
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       padding: EdgeInsets.fromLTRB(
         12,
-        topInset + 12,
+        12,
         12,
         12 + bottomNavClearance(context),
       ),
@@ -203,7 +225,7 @@ class _HardwareListPageState extends State<HardwareListPage>
     );
   }
 
-  Widget _emptyCategory(String category, double topInset) {
+  Widget _emptyCategory(String category) {
     final isPlan = category == '整机方案';
     final content = Column(
       mainAxisSize: MainAxisSize.min,
@@ -222,12 +244,16 @@ class _HardwareListPageState extends State<HardwareListPage>
         ),
       ],
     );
-    // 所有分类（含整机方案）空状态都上移，避免和右下角 + 挤在一起。
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: EdgeInsets.only(top: topInset + 96),
-        child: content,
+    // 空状态也做成可滚动，让标题栏能随上滑淡出、并带橡皮筋回弹。
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        child: SizedBox(
+          height: constraints.maxHeight,
+          child: Center(child: content),
+        ),
       ),
     );
   }

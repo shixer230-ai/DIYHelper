@@ -25,7 +25,7 @@ class _CatalogPageState extends State<CatalogPage>
   String _query = '';
 
   // 预置库的品类顺序（即各 Tab 的顺序）。
-  static const _categories = ['CPU', '显卡', '主板', '内存', '硬盘', '电源'];
+  static const _categories = ['CPU', '显卡', '主板', '内存', '硬盘', '电源', '机箱'];
 
   // 搜索结果的品类展示顺序（含用户自定义可能用到的品类）。
   static const _searchCategories = [
@@ -254,10 +254,7 @@ class _CatalogPageState extends State<CatalogPage>
         if (_userSpecs.isEmpty)
           _emptyMine(context)
         else
-          for (final sec in sections) ...[
-            _sectionHeader(sec.brand),
-            for (final s in sec.specs) _specCard(context, s),
-          ],
+          for (final sec in sections) _brandGroupCard(sec.brand, sec.specs),
       ],
     );
   }
@@ -295,15 +292,12 @@ class _CatalogPageState extends State<CatalogPage>
       ),
       children: [
         Text(
-          '预置参考型号，跑分为约值，点击查看详情。',
+          '预置参考型号，跑分为约值，点击查看详情',
           style: Theme.of(context).textTheme.bodySmall
               ?.copyWith(color: Colors.grey),
         ),
         const SizedBox(height: 8),
-        for (final sec in sections) ...[
-          _sectionHeader(sec.brand),
-          for (final s in sec.specs) _specCard(context, s),
-        ],
+        for (final sec in sections) _brandGroupCard(sec.brand, sec.specs),
       ],
     );
   }
@@ -340,7 +334,7 @@ class _CatalogPageState extends State<CatalogPage>
             const Text('还没有自定义添加的型号'),
             const SizedBox(height: 4),
             Text(
-              '点「自定义添加」录入新硬件，或在预置型号详情里点「加入我的添加」收藏。',
+              '点「自定义添加」录入新硬件，或在预置型号详情里点「加入我的添加」收藏',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall
                   ?.copyWith(color: Colors.grey),
@@ -351,15 +345,49 @@ class _CatalogPageState extends State<CatalogPage>
     );
   }
 
+  /// 单个型号行（不含卡片），用于放进品牌分组大卡片内。
+  Widget _specTile(BuildContext context, HardwareSpec spec) {
+    return ListTile(
+      leading: CategoryBadge(category: spec.category),
+      title: Text(spec.model),
+      subtitle: Text(spec.brand),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _openDetail(spec),
+    );
+  }
+
+  /// 搜索结果里的单个型号卡片（保持独立卡片样式）。
   Widget _specCard(BuildContext context, HardwareSpec spec) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CategoryBadge(category: spec.category),
-        title: Text(spec.model),
-        subtitle: Text(spec.brand),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _openDetail(spec),
+      child: _specTile(context, spec),
+    );
+  }
+
+  /// 品牌分组：一张大圆角卡片，顶部品牌名标题，下面该品牌所有型号分行。
+  Widget _brandGroupCard(String brand, List<HardwareSpec> specs) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              brand,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+          for (var i = 0; i < specs.length; i++) ...[
+            if (i > 0) const Divider(height: 1, indent: 16),
+            _specTile(context, specs[i]),
+          ],
+          const SizedBox(height: 4),
+        ],
       ),
     );
   }

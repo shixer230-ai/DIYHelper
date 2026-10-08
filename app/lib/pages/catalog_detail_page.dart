@@ -118,7 +118,7 @@ class _CatalogDetailPageState extends State<CatalogDetailPage> {
             ...spec.benchmarks.map((e) => _entryRow(theme, e, emphasize: true)),
             const SizedBox(height: 12),
             Text(
-              '注：跑分为参考值（约），随平台、驱动版本、测试环境不同会有差异。',
+              '注：跑分为参考值（约），随平台、驱动版本、测试环境不同会有差异',
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
             ),
           ],

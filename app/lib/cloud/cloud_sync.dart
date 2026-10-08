@@ -1,6 +1,7 @@
 import 'package:cloudbase_flutter/cloudbase_flutter.dart';
 
 import '../models/build_plan.dart';
+import '../models/custom_item.dart';
 import 'auth_service.dart';
 import 'cloud_app.dart';
 
@@ -16,6 +17,12 @@ class CloudSync {
 
   /// 单个方案最大配件数（兜底校验，实际槽位约 7 个）。
   static const int kMaxComponentsPerPlan = 16;
+
+  /// 每个用户云端自定义项目数量上限（防恶意占用）。
+  static const int kMaxCloudCustomItems = 30;
+
+  /// 自定义项目名称最大长度。
+  static const int kMaxCustomNameLen = 50;
 
   /// 取当前登录用户的稳定 ID；未登录抛错。
   static String _requireUid() {
@@ -82,6 +89,63 @@ class CloudSync {
     _requireUid();
     final db = CloudApp.app.database();
     final res = await db.collection('plans').doc(planId).remove();
+    if (!res.isSuccess) {
+      throw Exception('云端删除失败：${res.message ?? res.code}');
+    }
+  }
+
+  /// 校验自定义项目数据合法（拦下异常 / 超大 payload）。
+  static void _validateCustomItem(CustomItem item) {
+    if (item.name.length > kMaxCustomNameLen) {
+      throw Exception('项目名过长（最多 $kMaxCustomNameLen 字）');
+    }
+    if (item.description.length > 200) {
+      throw Exception('画质描述过长');
+    }
+  }
+
+  /// 上传单个自定义项目（按 id 幂等覆盖，写入 owner 做用户隔离）。
+  static Future<void> uploadCustomItem(CustomItem item) async {
+    final uid = _requireUid();
+    _validateCustomItem(item);
+    final db = CloudApp.app.database();
+    final data = item.toJson()..['owner'] = uid;
+    final res = await db.collection('custom_items').doc(item.id).set(data);
+    if (!res.isSuccess) {
+      throw Exception('上传失败：${res.message ?? res.code}');
+    }
+  }
+
+  /// 从云拉取当前用户自己的所有自定义项目。
+  static Future<List<CustomItem>> downloadCustomItems() async {
+    final uid = _requireUid();
+    final db = CloudApp.app.database();
+    final res = await db
+        .collection('custom_items')
+        .where({'owner': uid})
+        .limit(kMaxCloudCustomItems)
+        .get();
+    if (!res.isSuccess) {
+      throw Exception('拉取失败：${res.message ?? res.code}');
+    }
+    return res.data.map((e) => CustomItem.fromJson(e)).toList();
+  }
+
+  /// 统计当前用户云端自定义项目数（上传前判上限）。
+  static Future<int> countCustomItems() async {
+    final uid = _requireUid();
+    final db = CloudApp.app.database();
+    final res =
+        await db.collection('custom_items').where({'owner': uid}).count();
+    if (!res.isSuccess) return kMaxCloudCustomItems + 1;
+    return res.total;
+  }
+
+  /// 删除云端某个自定义项目（本地删除时同步调用）。
+  static Future<void> deleteCustomItem(String itemId) async {
+    _requireUid();
+    final db = CloudApp.app.database();
+    final res = await db.collection('custom_items').doc(itemId).remove();
     if (!res.isSuccess) {
       throw Exception('云端删除失败：${res.message ?? res.code}');
     }

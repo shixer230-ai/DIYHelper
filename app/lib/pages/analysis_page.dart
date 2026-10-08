@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../analysis/value_index.dart';
+import '../cloud/auth_service.dart';
+import '../cloud/cloud_sync.dart';
 import '../data/hardware_catalog.dart';
 import '../models/build_plan.dart';
 import '../models/custom_item.dart';
@@ -34,6 +36,8 @@ class _AnalysisPageState extends State<AnalysisPage>
   ValueItem _builtin = kValueItems.first; // 选中的内置项目
   String? _customId; // 选中的自定义项目 id（null = 没选自定义）
   bool _loading = true;
+  bool _syncing = false; // 云同步防连点
+  Set<String> _pendingDeletes = {}; // 待补删云端的自定义项目 id
 
   @override
   bool get wantKeepAlive => true;
@@ -55,11 +59,13 @@ class _AnalysisPageState extends State<AnalysisPage>
     final plans = await _planStore.loadAll();
     final userSpecs = await _userStore.loadAll();
     final customs = await _customStore.loadAll();
+    final pending = await _customStore.loadPendingDeleteIds();
     if (!mounted) return;
     setState(() {
       _plans = plans;
       _library = [...kHardwareCatalog, ...userSpecs];
       _customItems = customs;
+      _pendingDeletes = pending;
       _loading = false;
     });
   }
@@ -115,6 +121,7 @@ class _AnalysisPageState extends State<AnalysisPage>
     await _reloadCustoms();
     if (!mounted) return;
     setState(() => _customId = result.id);
+    _uploadCustom(result);
   }
 
   Future<void> _editCustom() async {
@@ -127,6 +134,7 @@ class _AnalysisPageState extends State<AnalysisPage>
     if (result == null) return;
     await _customStore.update(result);
     await _reloadCustoms();
+    _uploadCustom(result);
   }
 
   Future<void> _deleteCustom() async {
@@ -136,7 +144,7 @@ class _AnalysisPageState extends State<AnalysisPage>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删除自定义项目'),
-        content: Text('确定删除「${item.fullLabel}」吗？已填的分数会一并删除。'),
+        content: Text('确定删除「${item.fullLabel}」吗？已填的分数会一并删除'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -153,6 +161,71 @@ class _AnalysisPageState extends State<AnalysisPage>
     await _customStore.remove(item.id);
     if (_customId == item.id) _customId = null;
     await _reloadCustoms();
+
+    // 记墓碑 + 尽力删云端（离线/失败稍后自动补删）。
+    _pendingDeletes.add(item.id);
+    await _customStore.savePendingDeleteIds(_pendingDeletes);
+    if (!AuthService.instance.isLoggedIn) return;
+    try {
+      await CloudSync.deleteCustomItem(item.id);
+    } catch (_) {
+      // 删不掉就留着墓碑，下次恢复时过滤掉。
+    }
+  }
+
+  /// 新建/编辑后尽力上传到云（不阻断本地流程）。
+  Future<void> _uploadCustom(CustomItem item) async {
+    if (!AuthService.instance.isLoggedIn) return;
+    try {
+      await CloudSync.uploadCustomItem(item);
+    } catch (_) {
+      _snack('本地已保存；云端同步失败');
+    }
+  }
+
+  /// 从云拉取自定义项目，按 id 去重并入本地（墓碑里的项目会被过滤）。
+  Future<void> _downloadCustomsFromCloud() async {
+    if (!AuthService.instance.isLoggedIn) {
+      _snack('请先在「我的」页登录');
+      return;
+    }
+    if (_syncing) return;
+    setState(() => _syncing = true);
+    try {
+      // 先尽力把墓碑里的项目从云端删干净。
+      for (final id in _pendingDeletes.toList()) {
+        try {
+          await CloudSync.deleteCustomItem(id);
+        } catch (_) {}
+      }
+
+      final cloud = await CloudSync.downloadCustomItems();
+      final cloudIds = cloud.map((c) => c.id).toSet();
+      _pendingDeletes.removeWhere((id) => !cloudIds.contains(id));
+      await _customStore.savePendingDeleteIds(_pendingDeletes);
+
+      final visible =
+          cloud.where((c) => !_pendingDeletes.contains(c.id)).toList();
+      final existing = _customItems.map((c) => c.id).toSet();
+      var added = 0;
+      for (final c in visible) {
+        if (!existing.contains(c.id)) {
+          await _customStore.add(c);
+          added++;
+        }
+      }
+      await _reloadCustoms();
+      _snack(added == 0 ? '云端自定义项目已在本地' : '已从云恢复 $added 个项目');
+    } catch (e) {
+      _snack(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   // ---- 分数 ----
@@ -210,6 +283,11 @@ class _AnalysisPageState extends State<AnalysisPage>
             ),
           ),
           IconButton(
+            icon: const Icon(Icons.cloud_download_outlined),
+            tooltip: '从云恢复',
+            onPressed: _downloadCustomsFromCloud,
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             tooltip: '新建自定义项目',
             onPressed: _addCustom,
@@ -238,13 +316,16 @@ class _AnalysisPageState extends State<AnalysisPage>
     final skipped = _plans.length - results.length;
     final topIndex = results.isEmpty ? 0.0 : results.first.index;
     return ListView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       children: [
         if (results.isEmpty)
           _empty(theme)
         else
           for (var i = 0; i < results.length; i++)
-            _card(theme, i, results[i], topIndex),
+            _capsule(theme, results[i], topIndex),
         if (results.isNotEmpty && skipped > 0)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -275,10 +356,13 @@ class _AnalysisPageState extends State<AnalysisPage>
     final unscored = _plans.where((p) => custom.scoreOf(p.id) == null).toList();
 
     return ListView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       children: [
         Text(
-          '填写各方案的「${custom.scoreLabel}」，点 ✓ 保存后按性价比指数从高到低排行。',
+          '填写各方案的「${custom.scoreLabel}」，点 ✓ 保存后按性价比指数从高到低排行',
           style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
         ),
         const SizedBox(height: 8),
@@ -327,149 +411,59 @@ class _AnalysisPageState extends State<AnalysisPage>
     );
   }
 
-  Widget _card(ThemeData theme, int i, PlanValue v, double topIndex) {
-    final isTop = i == 0;
-    // 相对第一名的百分比（第一名为 100%）；整机功耗越小越好，故用倒数。
+  /// 性价比胶囊条：整条满宽即底部导航栏的宽度（ListView 内容区 = 屏幕宽 - 24，
+  /// 与底部导航的外边距一致），第一名满宽、其余按相对百分比缩短，低于 20% 按 20% 显示。
+  /// 胶囊内只显示方案名 + 数值（性价比指数 / 整机功耗），不再展示跑分、价格与序号。
+  Widget _capsule(ThemeData theme, PlanValue v, double topIndex) {
     final ratio = topIndex <= 0
         ? 1.0
         : (_isPower ? topIndex / v.index : v.index / topIndex);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Row(
+    final clamped = ratio < 0.2 ? 0.2 : ratio;
+    final value = _isPower ? '${_fmt(v.index)}W' : v.index.toStringAsFixed(1);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: clamped,
+          child: Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.38),
+              ),
+            ),
+            child: Row(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isTop
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${i + 1}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isTop
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        v.planName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 16),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _isPower
-                            ? '整机功耗 ${_fmt(v.bench)}W'
-                            : '${_builtin.label} ${_fmt(v.bench)}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '整机 ¥${_fmt(v.price)}',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: Colors.grey),
-                      ),
-                    ],
+                  child: Text(
+                    v.planName,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: theme.colorScheme.onSurface,
+                    ),
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
-                      transitionBuilder: (child, anim) =>
-                          FadeTransition(opacity: anim, child: child),
-                      child: Text(
-                        _isPower
-                            ? '${_fmt(v.index)}W'
-                            : v.index.toStringAsFixed(1),
-                        key: ValueKey(v.index),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      _isPower ? '整机功耗' : '性价比指数',
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(color: Colors.grey),
-                    ),
-                  ],
+                const SizedBox(width: 8),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            _valueBar(theme, ratio),
-          ],
+          ),
         ),
       ),
     );
-  }
-
-  /// 性价比相对条形图：第一名满格 100%，其余按比例缩短；低于 20% 时不再缩短，标注 <=20%。
-  Widget _valueBar(ThemeData theme, double ratio) {
-    final clamped = ratio < 0.2 ? 0.2 : ratio;
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 18,
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: FractionallySizedBox(
-              widthFactor: clamped,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 56,
-          child: Text(
-            _pct(ratio),
-            textAlign: TextAlign.right,
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// 把相对比例转成展示文本：第一名 100%，低于 20% 标 <=20%，其余保留整数百分比（不整则 1 位小数）。
-  String _pct(double ratio) {
-    if (ratio >= 1.0) return '100%';
-    final pct = ratio * 100;
-    if (pct < 20) return '<=20%';
-    final s = pct.toStringAsFixed(1);
-    return s.endsWith('.0') ? '${pct.round()}%' : '$s%';
   }
 }
 
@@ -552,74 +546,63 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rank = widget.rank;
-    final isTop = rank == 1;
     final score = widget.item.scoreOf(widget.plan.id);
     final index = (score != null && widget.plan.total > 0)
         ? score / widget.plan.total * 1000
         : null;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+            color: theme.colorScheme.primary.withValues(alpha: 0.38),
+          ),
+        ),
         child: Row(
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isTop
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                rank == null ? '—' : '$rank',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isTop
-                      ? theme.colorScheme.onPrimary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
             Expanded(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     widget.plan.name.isEmpty ? '未命名方案' : widget.plan.name,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 16),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
                   ),
-                  const SizedBox(height: 2),
                   if (score != null)
                     Text(
-                      '${widget.item.scoreLabel} ${_fmt(score)}',
-                      style: theme.textTheme.bodySmall,
+                      '整机 ¥${_fmt(widget.plan.total)} · ${widget.item.scoreLabel} ${_fmt(score)}',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: Colors.grey),
                     ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '整机 ¥${_fmt(widget.plan.total)}',
-                    style:
-                        theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-                  ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
             SizedBox(
-              width: 130,
+              width: 140,
               child: TextField(
                 controller: _controller,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: widget.item.scoreLabel,
+                  hintText: widget.item.scoreLabel,
                   isDense: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999))),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(999)),
+                  ),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.check, size: 18),
                     tooltip: '保存',
@@ -629,8 +612,9 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
                 onSubmitted: (_) => _save(),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 AnimatedSwitcher(

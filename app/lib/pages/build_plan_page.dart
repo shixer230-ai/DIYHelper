@@ -110,7 +110,11 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     }
     final name = await showDialog<String>(
       context: context,
-      builder: (_) => _NameDialog(title: '新建方案', initial: _nextName(_plans)),
+      builder: (_) => _NameDialog(
+        title: '新建方案',
+        initial: _nextName(_plans),
+        forbidden: _takenNames(null),
+      ),
     );
     if (name == null) return;
     final plan = BuildPlan(name: name);
@@ -132,10 +136,20 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     await _store.saveCurrentId(null);
   }
 
+  /// 现有方案名（trim + 小写归一化）用于查重；重命名时排除自身，允许保留原名。
+  Set<String> _takenNames(String? excludeId) => {
+        for (final p in _plans)
+          if (p.id != excludeId) p.name.trim().toLowerCase(),
+      };
+
   Future<void> _rename(BuildPlan plan) async {
     final name = await showDialog<String>(
       context: context,
-      builder: (_) => _NameDialog(title: '重命名', initial: plan.name),
+      builder: (_) => _NameDialog(
+        title: '重命名',
+        initial: plan.name,
+        forbidden: _takenNames(plan.id),
+      ),
     );
     if (name == null) return;
     setState(() {
@@ -257,6 +271,29 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       customPower: plan.customPower,
     );
     updated.set(slot.key, null);
+    setState(() => _replace(plan.id, updated));
+    await _store.saveAll(_plans);
+  }
+
+  /// 在方案详情页内联改某槽位配件的价格（实时刷新总价）。
+  Future<void> _setPrice(BuildSlot slot, double price) async {
+    final plan = _current;
+    if (plan == null) return;
+    final comp = plan[slot.key];
+    if (comp == null) return;
+    final updated = BuildPlan(
+      id: plan.id,
+      name: plan.name,
+      components: Map.of(plan.components),
+      customPower: plan.customPower,
+    );
+    updated.components[slot.key] = PlanComponent(
+      category: comp.category,
+      brand: comp.brand,
+      model: comp.model,
+      price: price,
+      platform: comp.platform,
+    );
     setState(() => _replace(plan.id, updated));
     await _store.saveAll(_plans);
   }
@@ -581,6 +618,9 @@ class _BuildPlanPageState extends State<BuildPlanPage>
   Widget _folderList(BuildContext context) {
     if (_plans.isEmpty) return _emptyState(context);
     return ListView.builder(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       padding: EdgeInsets.fromLTRB(
         12,
         12,
@@ -674,6 +714,9 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     final theme = Theme.of(context);
     final filled = kBuildSlots.where((s) => plan[s.key] != null).length;
     return ListView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       padding: EdgeInsets.fromLTRB(
         12,
         12,
@@ -684,7 +727,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
         _totalLine(theme, filled, plan.total),
         _compatCard(theme, plan),
         const SizedBox(height: 4),
-        for (final slot in kBuildSlots) _slotCard(theme, slot, plan),
+        _slotsCard(plan),
         const SizedBox(height: 12),
         _powerCard(plan),
         const SizedBox(height: 16),
@@ -797,51 +840,24 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     );
   }
 
-  Widget _slotCard(ThemeData theme, BuildSlot slot, BuildPlan plan) {
-    final comp = plan[slot.key];
+  /// 所有槽位合并为一张大圆角卡片，内部每行一个槽位（可内联改价格）。
+  Widget _slotsCard(BuildPlan plan) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 6),
-      child: ListTile(
-        // 瘦身：dense 减小上下留白，卡片更紧凑。
-        dense: true,
-        leading: CategoryBadge(category: slot.category),
-        title: Text(
-          slot.required ? slot.label : '${slot.label}（可选）',
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-        ),
-        subtitle: Text(
-          comp == null
-              ? '未选择'
-              : comp.brand.isEmpty
-              ? comp.model
-              : '${comp.model} · ${comp.brand}',
-        ),
-        // 右边只保留价格 + 删除按钮，不再显示「>」箭头。
-        trailing: comp == null
-            ? null
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '¥${_fmt(comp.price)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _clearSlot(slot),
-                    tooltip: '移除${slot.label}',
-                    icon: Icon(
-                      Icons.close,
-                      size: 18,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-        onTap: () => _pick(slot),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: [
+          for (var i = 0; i < kBuildSlots.length; i++) ...[
+            if (i > 0) const Divider(height: 1, indent: 56),
+            _SlotRow(
+              key: ValueKey('${plan.id}-${kBuildSlots[i].key}'),
+              slot: kBuildSlots[i],
+              comp: plan[kBuildSlots[i].key],
+              onPick: () => _pick(kBuildSlots[i]),
+              onClear: () => _clearSlot(kBuildSlots[i]),
+              onPriceChanged: (price) => _setPrice(kBuildSlots[i], price),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -924,47 +940,165 @@ class _PowerEditorState extends State<_PowerEditor> {
 
   @override
   Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: TextField(
+        controller: _c,
+        keyboardType: const TextInputType.numberWithOptions(
+          decimal: true,
+        ),
+        onSubmitted: _submit,
+        decoration: InputDecoration(
+          labelText: '自定义功耗',
+          hintText: '选填',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+          isDense: true,
+          suffixIcon: IconButton(
+            onPressed: () => _submit(_c.text),
+            tooltip: '保存功耗',
+            icon: const Icon(Icons.check),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 大圆角卡片内的一行槽位：显示品类图标 + 槽位名 + 型号/品牌，
+/// 已选时右侧提供内联价格输入（实时改价）与移除按钮。
+class _SlotRow extends StatefulWidget {
+  const _SlotRow({
+    super.key,
+    required this.slot,
+    required this.comp,
+    required this.onPick,
+    required this.onClear,
+    required this.onPriceChanged,
+  });
+
+  final BuildSlot slot;
+  final PlanComponent? comp;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+  final ValueChanged<double> onPriceChanged;
+
+  @override
+  State<_SlotRow> createState() => _SlotRowState();
+}
+
+class _SlotRowState extends State<_SlotRow> {
+  late final TextEditingController _price = TextEditingController(
+    text: _priceText(widget.comp),
+  );
+
+  static String _priceText(PlanComponent? comp) =>
+      comp == null || comp.price <= 0 ? '' : _fmt(comp.price);
+
+  @override
+  void didUpdateWidget(covariant _SlotRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 只有换型号（重新选择）才重置价格框；用户自己改价时不打断输入。
+    final modelChanged = oldWidget.comp?.model != widget.comp?.model ||
+        (oldWidget.comp == null) != (widget.comp == null);
+    if (modelChanged) {
+      _price.text = _priceText(widget.comp);
+    }
+  }
+
+  @override
+  void dispose() {
+    _price.dispose();
+    super.dispose();
+  }
+
+  void _onPriceChanged(String raw) {
+    final t = raw.trim();
+    if (t.isEmpty) return; // 空 / 中间态不提交
+    final n = double.tryParse(t);
+    if (n == null || n <= 0) return;
+    if (n > kMaxPrice) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('价格不能超过 8388608，请重新输入')),
+      );
+      return;
+    }
+    widget.onPriceChanged(n);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      // 和其它卡片一样贴满宽度，避免默认 4px 外边距让功耗卡变窄。
-      margin: const EdgeInsets.only(bottom: 8),
+    final comp = widget.comp;
+    return InkWell(
+      onTap: widget.onPick,
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
           children: [
-            Row(
-              children: [
-                Icon(Icons.bolt, size: 20, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  '整机功耗',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+            CategoryBadge(category: widget.slot.category),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.slot.required
+                        ? widget.slot.label
+                        : '${widget.slot.label}（可选）',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    comp == null
+                        ? '未选择'
+                        : comp.brand.isEmpty
+                            ? comp.model
+                            : '${comp.model} · ${comp.brand}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (comp != null) ...[
+              SizedBox(
+                width: 96,
+                child: TextField(
+                  controller: _price,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: _onPriceChanged,
+                  decoration: const InputDecoration(
+                    prefixText: '¥ ',
+                    hintText: '价格',
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(999)),
+                    ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _c,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
               ),
-              onSubmitted: _submit,
-              decoration: InputDecoration(
-                labelText: '自定义整机功耗',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(999)),
-                ),
-                isDense: true,
-                suffixIcon: IconButton(
-                  onPressed: () => _submit(_c.text),
-                  tooltip: '保存功耗',
-                  icon: const Icon(Icons.check),
+              IconButton(
+                onPressed: widget.onClear,
+                tooltip: '移除${widget.slot.label}',
+                icon: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -972,12 +1106,19 @@ class _PowerEditorState extends State<_PowerEditor> {
   }
 }
 
-/// 输入方案名称的对话框，返回名称（非空）。
+/// 输入方案名称的对话框，返回名称（非空）；与已有方案重名时不关闭并提示。
 class _NameDialog extends StatefulWidget {
-  const _NameDialog({required this.title, this.initial = ''});
+  const _NameDialog({
+    required this.title,
+    this.initial = '',
+    this.forbidden = const {},
+  });
 
   final String title;
   final String initial;
+
+  /// 不允许重名的名称集合（已归一化：trim + 小写）；重命名时不含自身。
+  final Set<String> forbidden;
 
   @override
   State<_NameDialog> createState() => _NameDialogState();
@@ -987,6 +1128,7 @@ class _NameDialogState extends State<_NameDialog> {
   late final TextEditingController _c = TextEditingController(
     text: widget.initial,
   );
+  String? _error;
 
   @override
   void dispose() {
@@ -997,6 +1139,10 @@ class _NameDialogState extends State<_NameDialog> {
   void _submit() {
     final t = _c.text.trim();
     if (t.isEmpty) return;
+    if (widget.forbidden.contains(t.toLowerCase())) {
+      setState(() => _error = '已存在同名方案，请换一个');
+      return;
+    }
     Navigator.pop(context, t);
   }
 
@@ -1007,7 +1153,7 @@ class _NameDialogState extends State<_NameDialog> {
       content: TextField(
         controller: _c,
         autofocus: true,
-        decoration: const InputDecoration(labelText: '名称'),
+        decoration: InputDecoration(labelText: '名称', errorText: _error),
         onSubmitted: (_) => _submit(),
       ),
       actions: [

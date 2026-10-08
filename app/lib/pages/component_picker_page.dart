@@ -110,20 +110,15 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
     );
   }
 
-  Future<void> _pickSpec(HardwareSpec spec) async {
-    final price = await showDialog<double>(
-      context: context,
-      builder: (context) => _SpecPriceDialog(spec: spec),
-    );
-    if (price == null) return;
+  void _pickSpec(HardwareSpec spec) {
+    // 不再弹二级页填价格：价格留空（0），回到方案详情页在该行内联填写。
     final comp = PlanComponent(
       category: spec.category,
       brand: spec.brand,
       model: spec.model,
-      price: price,
+      price: 0,
       platform: '',
     );
-    if (!mounted) return;
     Navigator.pop(context, (false, comp));
   }
 
@@ -340,66 +335,6 @@ InputDecoration _glassFieldDeco(BuildContext context, String label) {
   );
 }
 
-/// 从硬件库选型号时，填写价格（返回价格）。
-class _SpecPriceDialog extends StatefulWidget {
-  const _SpecPriceDialog({required this.spec});
-
-  final HardwareSpec spec;
-
-  @override
-  State<_SpecPriceDialog> createState() => _SpecPriceDialogState();
-}
-
-class _SpecPriceDialogState extends State<_SpecPriceDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _price = TextEditingController();
-
-  @override
-  void dispose() {
-    _price.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-    Navigator.pop(context, double.parse(_price.text.trim()));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('填写价格：${widget.spec.model}'),
-      content: Form(
-        key: _formKey,
-        child: TextFormField(
-          controller: _price,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: _glassFieldDeco(context, '价格（元）*'),
-          validator: (v) {
-            final t = v?.trim() ?? '';
-            if (t.isEmpty) return '请填写价格';
-            final n = double.tryParse(t);
-            if (n == null || n <= 0) return '价格格式不对';
-            return null;
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          style: capsuleButtonStyle(Theme.of(context), fullWidth: false),
-          child: const Text('确定'),
-        ),
-      ],
-    );
-  }
-}
-
 /// 手动填写型号 + 品牌 + 价格，返回 (价格, 型号, 品牌)。
 class _ManualEntryDialog extends StatefulWidget {
   const _ManualEntryDialog({required this.slotLabel});
@@ -462,6 +397,7 @@ class _ManualEntryDialogState extends State<_ManualEntryDialog> {
                 if (t.isEmpty) return '请填写价格';
                 final n = double.tryParse(t);
                 if (n == null || n <= 0) return '价格格式不对';
+                if (n > kMaxPrice) return '价格不能超过 $kMaxPrice';
                 return null;
               },
             ),

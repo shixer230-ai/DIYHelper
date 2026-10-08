@@ -98,52 +98,65 @@ class _CatalogPageState extends State<CatalogPage>
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('硬件库')),
-      body: Column(
-        children: [
-          _searchBar(),
-          if (_searching)
-            Expanded(child: _buildSearchResults())
-          else ...[
-            TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicatorPadding: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 8,
-              ),
-              indicator: BoxDecoration(
-                // 与「我的硬件清单」分类选中色块一致：主题色半透明胶囊。
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              labelColor: Theme.of(context).colorScheme.primary,
-              unselectedLabelColor: Theme.of(context)
-                  .colorScheme
-                  .onSurfaceVariant,
-              dividerColor: Colors.transparent,
-              tabs: [
-                const Tab(text: '我的添加'),
-                for (final c in _categories) Tab(text: c),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildMineTab(),
-                  for (final c in _categories) _buildCategoryTab(c),
-                ],
-              ),
+      body: SafeArea(
+        bottom: false,
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverAppBar(
+              pinned: false,
+              floating: false,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              title: const Text('硬件库'),
             ),
           ],
-        ],
+          body: Column(
+            children: [
+              _searchBar(),
+              if (_searching)
+                Expanded(child: _buildSearchResults())
+              else ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+                  child: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicatorPadding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
+                    ),
+                    indicator: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary
+                          .withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    labelColor: Theme.of(context).colorScheme.primary,
+                    unselectedLabelColor: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant,
+                    dividerColor: Colors.transparent,
+                    tabs: [
+                      const Tab(text: '我的添加'),
+                      for (final c in _categories) Tab(text: c),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildMineTab(),
+                      for (final c in _categories) _buildCategoryTab(c),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -269,10 +282,11 @@ class _CatalogPageState extends State<CatalogPage>
     final unique = order.where((b) => seen.add(b)).toList();
     final sections = <({String brand, List<HardwareSpec> specs})>[];
     for (final brand in unique) {
-      final list = _userSpecs
-          .where((s) => brandGroupOf(s.category, s.brand) == brand)
-          .toList()
-        ..sort((a, b) => a.model.compareTo(b.model));
+      final list =
+          _userSpecs
+              .where((s) => brandGroupOf(s.category, s.brand) == brand)
+              .toList()
+            ..sort((a, b) => a.model.compareTo(b.model));
       if (list.isNotEmpty) sections.add((brand: brand, specs: list));
     }
     return sections;

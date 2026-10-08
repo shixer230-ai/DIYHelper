@@ -63,33 +63,53 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('我的')),
-      body: ListenableBuilder(
-        listenable: ThemeController.instance,
-        builder: (context, _) {
-          final theme = Theme.of(context);
-          return ListView(
-            padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
-            children: [
-              _accountCard(context, theme),
-              const SizedBox(height: 16),
-              _sectionTitle(theme, '背景'),
-              _backgroundCard(theme, context),
-              const SizedBox(height: 16),
-              _sectionTitle(theme, '主题色'),
-              _seedCard(theme),
-              const SizedBox(height: 16),
-              _sectionTitle(theme, '外观'),
-              _appearanceCard(theme),
-              const SizedBox(height: 16),
-              _sectionTitle(theme, '工具'),
-              _toolsCard(theme, context),
-              const SizedBox(height: 16),
-              _sectionTitle(theme, '关于'),
-              _aboutCard(context, theme),
-            ],
-          );
-        },
+      body: SafeArea(
+        bottom: false,
+        child: ListenableBuilder(
+          listenable: ThemeController.instance,
+          builder: (context, _) {
+            final theme = Theme.of(context);
+            return CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  pinned: false,
+                  floating: false,
+                  backgroundColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                  title: const Text('我的'),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    12,
+                    12,
+                    12,
+                    12 + bottomNavClearance(context),
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      _accountCard(context, theme),
+                      const SizedBox(height: 16),
+                      _sectionTitle(theme, '背景'),
+                      _backgroundCard(theme, context),
+                      const SizedBox(height: 16),
+                      _sectionTitle(theme, '主题色'),
+                      _seedCard(theme),
+                      const SizedBox(height: 16),
+                      _sectionTitle(theme, '外观'),
+                      _appearanceCard(theme),
+                      const SizedBox(height: 16),
+                      _sectionTitle(theme, '工具'),
+                      _toolsCard(theme, context),
+                      const SizedBox(height: 16),
+                      _sectionTitle(theme, '关于'),
+                      _aboutCard(context, theme),
+                    ]),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -120,14 +140,16 @@ class ProfilePage extends StatelessWidget {
                         children: [
                           Text(
                             nickname,
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             '点击修改昵称',
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(color: Colors.grey),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -181,9 +203,8 @@ class ProfilePage extends StatelessWidget {
   Future<void> _uploadAvatar(BuildContext context) async {
     final path = ThemeController.instance.avatarPath;
     if (path == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('还没有头像，先点头像从相册选一张')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('还没有头像，先点头像从相册选一张')));
       return;
     }
     try {
@@ -191,9 +212,8 @@ class ProfilePage extends StatelessWidget {
       final ext = path.contains('.') ? path.split('.').last : 'jpg';
       await CloudSync.uploadAvatar(bytes, ext);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('头像已上传到云')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('头像已上传到云')));
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -232,7 +252,11 @@ class ProfilePage extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: theme.colorScheme.surface, width: 2),
               ),
-              child: const Icon(Icons.camera_alt, size: 12, color: Colors.white),
+              child: const Icon(
+                Icons.camera_alt,
+                size: 12,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -338,12 +362,30 @@ class ProfilePage extends StatelessWidget {
     return Card(
       child: Column(
         children: [
-          _modeTile(theme, mode, ThemeMode.system, Icons.brightness_auto_outlined,
-              '跟随系统', '跟随手机系统的深浅色设置'),
-          _modeTile(theme, mode, ThemeMode.light, Icons.light_mode_outlined,
-              '浅色', '一直使用浅色外观'),
-          _modeTile(theme, mode, ThemeMode.dark, Icons.dark_mode_outlined,
-              '深色', '一直使用深色外观'),
+          _modeTile(
+            theme,
+            mode,
+            ThemeMode.system,
+            Icons.brightness_auto_outlined,
+            '跟随系统',
+            '跟随手机系统的深浅色设置',
+          ),
+          _modeTile(
+            theme,
+            mode,
+            ThemeMode.light,
+            Icons.light_mode_outlined,
+            '浅色',
+            '一直使用浅色外观',
+          ),
+          _modeTile(
+            theme,
+            mode,
+            ThemeMode.dark,
+            Icons.dark_mode_outlined,
+            '深色',
+            '一直使用深色外观',
+          ),
         ],
       ),
     );
@@ -377,9 +419,8 @@ class ProfilePage extends StatelessWidget {
     final plans = await BuildPlanStore().loadAll();
     if (!context.mounted) return;
     if (plans.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('还没有整机方案，先去「整机方案」页创建一个')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('还没有整机方案，先去「整机方案」页创建一个')));
       return;
     }
     final plan = await showModalBottomSheet<BuildPlan>(
@@ -429,9 +470,8 @@ class ProfilePage extends StatelessWidget {
     plans.add(plan);
     await store.saveAll(plans);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已导入「$name」')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('已导入「$name」')));
   }
 
   Widget _aboutCard(BuildContext context, ThemeData theme) {
@@ -568,8 +608,9 @@ class _NicknameDialog extends StatefulWidget {
 }
 
 class _NicknameDialogState extends State<_NicknameDialog> {
-  late final TextEditingController _c =
-      TextEditingController(text: widget.initial);
+  late final TextEditingController _c = TextEditingController(
+    text: widget.initial,
+  );
 
   @override
   void dispose() {
@@ -656,8 +697,7 @@ class _ExportSheet extends StatelessWidget {
   }
 }
 
-String _planName(BuildPlan plan) =>
-    plan.name.isEmpty ? '未命名方案' : plan.name;
+String _planName(BuildPlan plan) => plan.name.isEmpty ? '未命名方案' : plan.name;
 
 String _fmt(double p) =>
     p == p.roundToDouble() ? p.toStringAsFixed(0) : p.toStringAsFixed(2);
@@ -741,8 +781,9 @@ class _ImportDialog extends StatefulWidget {
 }
 
 class _ImportDialogState extends State<_ImportDialog> {
-  late final TextEditingController _c =
-      TextEditingController(text: widget.initialText);
+  late final TextEditingController _c = TextEditingController(
+    text: widget.initialText,
+  );
 
   @override
   void dispose() {

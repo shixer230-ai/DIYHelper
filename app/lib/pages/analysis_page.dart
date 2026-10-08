@@ -91,13 +91,12 @@ class _AnalysisPageState extends State<AnalysisPage>
   // ---- 选择器 ----
 
   List<_Choice> get _choices => [
-        for (final item in kValueItems) _Choice.builtin(item),
-        for (final c in _customItems) _Choice.custom(c),
-      ];
+    for (final item in kValueItems) _Choice.builtin(item),
+    for (final c in _customItems) _Choice.custom(c),
+  ];
 
-  _Choice get _selectedChoice => _isCustom
-      ? _Choice.custom(_custom!)
-      : _Choice.builtin(_builtin);
+  _Choice get _selectedChoice =>
+      _isCustom ? _Choice.custom(_custom!) : _Choice.builtin(_builtin);
 
   void _onChoiceChanged(_Choice? choice) {
     if (choice == null) return;
@@ -204,8 +203,9 @@ class _AnalysisPageState extends State<AnalysisPage>
       _pendingDeletes.removeWhere((id) => !cloudIds.contains(id));
       await _customStore.savePendingDeleteIds(_pendingDeletes);
 
-      final visible =
-          cloud.where((c) => !_pendingDeletes.contains(c.id)).toList();
+      final visible = cloud
+          .where((c) => !_pendingDeletes.contains(c.id))
+          .toList();
       final existing = _customItems.map((c) => c.id).toSet();
       var added = 0;
       for (final c in visible) {
@@ -241,14 +241,27 @@ class _AnalysisPageState extends State<AnalysisPage>
     super.build(context);
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('性价比分析')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _selector(theme),
-                Expanded(child: _body(theme)),
-              ],
+          : SafeArea(
+              bottom: false,
+              child: NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                  SliverAppBar(
+                    pinned: false,
+                    floating: false,
+                    backgroundColor: Colors.transparent,
+                    surfaceTintColor: Colors.transparent,
+                    title: const Text('性价比分析'),
+                  ),
+                ],
+                body: Column(
+                  children: [
+                    _selector(theme),
+                    Expanded(child: _body(theme)),
+                  ],
+                ),
+              ),
             ),
     );
   }
@@ -319,7 +332,12 @@ class _AnalysisPageState extends State<AnalysisPage>
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        12 + bottomNavClearance(context),
+      ),
       children: [
         if (results.isEmpty)
           _empty(theme)
@@ -359,7 +377,12 @@ class _AnalysisPageState extends State<AnalysisPage>
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        12 + bottomNavClearance(context),
+      ),
       children: [
         Text(
           '填写各方案的「${custom.scoreLabel}」，点 ✓ 保存后按性价比指数从高到低排行',
@@ -401,8 +424,8 @@ class _AnalysisPageState extends State<AnalysisPage>
             _plans.isEmpty
                 ? '先去「整机方案」建一个方案，并选好 CPU / 显卡'
                 : _isPower
-                    ? '所选「整机功耗」下，方案里配件的功耗数据未匹配到硬件库'
-                    : '所选「${_builtin.label}」下，方案里缺少对应部件或型号未匹配到硬件库',
+                ? '所选「整机功耗」下，方案里配件的功耗数据未匹配到硬件库'
+                : '所选「${_builtin.label}」下，方案里缺少对应部件或型号未匹配到硬件库',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
           ),
@@ -472,12 +495,8 @@ class _Choice {
   final ValueItem? builtin;
   final CustomItem? custom;
 
-  const _Choice.builtin(ValueItem v)
-      : builtin = v,
-        custom = null;
-  const _Choice.custom(CustomItem c)
-      : builtin = null,
-        custom = c;
+  const _Choice.builtin(ValueItem v) : builtin = v, custom = null;
+  const _Choice.custom(CustomItem c) : builtin = null, custom = c;
 
   bool get isCustom => custom != null;
   String get label => isCustom ? custom!.fullLabel : builtin!.label;
@@ -535,9 +554,8 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
     }
     final n = double.tryParse(t);
     if (n == null || n <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入大于 0 的数字')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请输入大于 0 的数字')));
       return;
     }
     widget.onSave(n);
@@ -580,8 +598,9 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
                   if (score != null)
                     Text(
                       '整机 ¥${_fmt(widget.plan.total)} · ${widget.item.scoreLabel} ${_fmt(score)}',
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(color: Colors.grey),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.grey,
+                      ),
                     ),
                 ],
               ),
@@ -591,8 +610,9 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
               width: 140,
               child: TextField(
                 controller: _controller,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
                   hintText: widget.item.scoreLabel,
                   isDense: true,
@@ -633,7 +653,9 @@ class _CustomScoreCardState extends State<_CustomScoreCard> {
                 ),
                 Text(
                   '性价比指数',
-                  style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: Colors.grey,
+                  ),
                 ),
               ],
             ),

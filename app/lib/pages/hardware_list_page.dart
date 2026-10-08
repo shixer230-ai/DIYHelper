@@ -147,29 +147,25 @@ class _HardwareListPageState extends State<HardwareListPage>
                     preferredSize: const Size.fromHeight(kTextTabBarHeight + 8),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                      // 分类标签用磨砂玻璃胶囊包裹，与底部导航的液态玻璃观感一致。
-                      child: GlassField(
-                        radius: 24,
-                        child: TabBar(
-                          controller: _tabController,
-                          isScrollable: true,
-                          tabAlignment: TabAlignment.start,
-                          // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
-                          indicatorSize: TabBarIndicatorSize.tab,
-                          indicatorPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 8,
-                          ),
-                          indicator: BoxDecoration(
-                            // 选中分类的主题色块：胶囊形 + 半透明主题色（和右下角 + 按钮风格一致）。
-                            color: scheme.primary.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          labelColor: scheme.primary,
-                          unselectedLabelColor: scheme.onSurfaceVariant,
-                          dividerColor: Colors.transparent,
-                          tabs: [for (final c in _categories) Tab(text: c)],
+                      // 分类标签：透明底色，仅保留选中胶囊高亮。
+                      child: TabBar(
+                        controller: _tabController,
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        indicatorPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 8,
                         ),
+                        indicator: BoxDecoration(
+                          color: scheme.primary.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        labelColor: scheme.primary,
+                        unselectedLabelColor: scheme.onSurfaceVariant,
+                        dividerColor: Colors.transparent,
+                        tabs: [for (final c in _categories) Tab(text: c)],
                       ),
                     ),
                   ),

@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 
 /// 预设主题色（用户可在「我的」页一键切换）。
@@ -53,8 +51,8 @@ ButtonStyle capsuleOutlinedButtonStyle(ThemeData theme) {
   );
 }
 
-/// 玻璃风格输入框外壳：半透明磨砂底色 + 细边框，配合 BackdropFilter 模糊，
-/// 用于搜索框 / 选择框，与底部液态玻璃导航的「玻璃」质感保持一致。
+/// 玻璃风格外壳：半透明渐变 + 细描边 + 顶部高光，模拟磨砂玻璃质感。
+/// 不用 BackdropFilter（实时模糊在滚动时会闪烁），故改为「假玻璃」方案。
 class GlassField extends StatelessWidget {
   const GlassField({
     super.key,
@@ -70,18 +68,52 @@ class GlassField extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: scheme.outlineVariant.withValues(alpha: 0.5),
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(radius),
+              border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.6),
+              ),
+              // 半透明玻璃底：从上到下略变淡，模拟玻璃厚度。
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  scheme.surface.withValues(alpha: 0.6),
+                  scheme.surface.withValues(alpha: 0.42),
+                ],
+              ),
+            ),
+            child: child,
+          ),
+          // 顶部一条细高光，模拟玻璃反光。
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: radius / 2,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(radius),
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      scheme.onSurface.withValues(alpha: 0.06),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-          child: child,
-        ),
+        ],
       ),
     );
   }

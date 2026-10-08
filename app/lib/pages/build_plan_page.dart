@@ -548,42 +548,50 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     super.build(context);
     final plan = _current;
     return Scaffold(
-      appBar: AppBar(
-        // 编辑态显示返回按钮（回到文件夹列表）；列表态不显示。
-        leading: plan == null
-            ? null
-            : IconButton(
-                onPressed: _backToList,
-                tooltip: '返回方案列表',
-                icon: const Icon(Icons.arrow_back),
-              ),
-        title: plan == null ? const Text('整机方案') : _planTitle(context, plan),
-        actions: [
-          if (plan == null)
-            IconButton(
-              onPressed: _createPlan,
-              tooltip: '新建方案',
-              icon: const Icon(Icons.add),
-            ),
-          if (plan == null)
-            IconButton(
-              onPressed: _downloadFromCloud,
-              tooltip: '从云恢复方案',
-              icon: const Icon(Icons.cloud_download_outlined),
-            ),
-          if (plan != null && plan.components.isNotEmpty)
-            IconButton(
-              onPressed: _clearAll,
-              tooltip: '清空方案',
-              icon: const Icon(Icons.delete_outline),
-            ),
-        ],
-      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : plan == null
-          ? _folderList(context)
-          : _planBody(plan),
+          : NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                SliverAppBar(
+                  pinned: false,
+                  floating: false,
+                  backgroundColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                  // 编辑态显示返回按钮（回到文件夹列表）；列表态不显示。
+                  leading: plan == null
+                      ? null
+                      : IconButton(
+                          onPressed: _backToList,
+                          tooltip: '返回方案列表',
+                          icon: const Icon(Icons.arrow_back),
+                        ),
+                  title: plan == null
+                      ? const Text('整机方案')
+                      : _planTitle(context, plan),
+                  actions: [
+                    if (plan == null)
+                      IconButton(
+                        onPressed: _createPlan,
+                        tooltip: '新建方案',
+                        icon: const Icon(Icons.add),
+                      ),
+                    if (plan == null)
+                      IconButton(
+                        onPressed: _downloadFromCloud,
+                        tooltip: '从云恢复方案',
+                        icon: const Icon(Icons.cloud_download_outlined),
+                      ),
+                    if (plan != null && plan.components.isNotEmpty)
+                      IconButton(
+                        onPressed: _clearAll,
+                        tooltip: '清空方案',
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                  ],
+                ),
+              ],
+              body: plan == null ? _folderList(context) : _planBody(plan),
+            ),
     );
   }
 

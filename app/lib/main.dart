@@ -36,6 +36,8 @@ class DiyHelperApp extends StatelessWidget {
         return MaterialApp(
           title: 'DIY 硬件性价比助手',
           debugShowCheckedModeBanner: false,
+          // 全局回弹：Android 默认是「硬钳制」，改成 iOS 式橡皮筋回弹，所有列表统一生效。
+          scrollBehavior: const _AppScrollBehavior(),
           theme: buildLightTheme(
             seed: c.seed,
             transparentBackground: c.hasBackground,
@@ -94,4 +96,14 @@ class _AppBackground extends StatelessWidget {
       ],
     );
   }
+}
+
+/// 全局滚动行为：把 Android 默认的「硬钳制」改成 iOS 式橡皮筋回弹，
+/// 让全 app 的可滚动列表统一带回弹效果。
+class _AppScrollBehavior extends MaterialScrollBehavior {
+  const _AppScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
 }

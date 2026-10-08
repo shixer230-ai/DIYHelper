@@ -491,7 +491,7 @@ class ProfilePage extends StatelessWidget {
           ),
           const ListTile(
             leading: Icon(Icons.widgets_outlined),
-            title: Text('DIY 硬件性价比助手'),
+            title: Text('DIYAss'),
             subtitle: Text('帮你从 CPU / 显卡到整机方案，挑出最划算的配置'),
           ),
           Padding(

@@ -34,7 +34,7 @@ class DiyHelperApp extends StatelessWidget {
       builder: (context, _) {
         final c = ThemeController.instance;
         return MaterialApp(
-          title: 'DIY 硬件性价比助手',
+          title: 'DIYAss',
           debugShowCheckedModeBanner: false,
           // 全局回弹：Android 默认是「硬钳制」，改成 iOS 式橡皮筋回弹，所有列表统一生效。
           scrollBehavior: const _AppScrollBehavior(),

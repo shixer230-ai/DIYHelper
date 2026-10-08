@@ -2,7 +2,7 @@
 // 版本号与署名在此统一维护，避免多处写死导致不一致。
 
 /// 当前对外版本号（显示在「我的」页）。
-const String kAppVersion = 'Beta 1.4.1';
+const String kAppVersion = '2.0.0';
 
 /// 版本更新日志，最新的排在最前。
 class VersionLogEntry {
@@ -13,6 +13,10 @@ class VersionLogEntry {
 }
 
 const List<VersionLogEntry> kVersionLog = [
+  VersionLogEntry('2.0.0', [
+    '正式版 2.0.0：退出 Beta，后续将逐步引入 AI 分析功能',
+    '应用更名 DIYAss，更换全新应用图标',
+  ]),
   VersionLogEntry('Beta 1.4.1', [
     '硬件库扩充：新增「机箱」品类，补入 Intel / AMD / NVIDIA 2011 年后主流型号 200+',
     '头像改为换头像后自动上传到云（移除手动上传入口）',

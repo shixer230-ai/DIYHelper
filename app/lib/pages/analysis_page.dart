@@ -38,6 +38,7 @@ class _AnalysisPageState extends State<AnalysisPage>
   bool _loading = true;
   bool _syncing = false; // 云同步防连点
   Set<String> _pendingDeletes = {}; // 待补删云端的自定义项目 id
+  Set<String> _planPendingDeletes = {}; // 待补删云端的方案 id（与整机方案页共用墓碑）
 
   @override
   bool get wantKeepAlive => true;
@@ -60,12 +61,14 @@ class _AnalysisPageState extends State<AnalysisPage>
     final userSpecs = await _userStore.loadAll();
     final customs = await _customStore.loadAll();
     final pending = await _customStore.loadPendingDeleteIds();
+    final planPending = await _planStore.loadPendingDeleteIds();
     if (!mounted) return;
     setState(() {
       _plans = plans;
       _library = [...kHardwareCatalog, ...userSpecs];
       _customItems = customs;
       _pendingDeletes = pending;
+      _planPendingDeletes = planPending;
       _loading = false;
     });
   }
@@ -182,8 +185,9 @@ class _AnalysisPageState extends State<AnalysisPage>
     }
   }
 
-  /// 从云拉取自定义项目，按 id 去重并入本地（墓碑里的项目会被过滤）。
-  Future<void> _downloadCustomsFromCloud() async {
+  /// 从云拉取数据：先恢复整机方案（分析排行要用），再恢复自定义项目（分数按方案 id 关联）。
+  /// 两边都按 id 去重并入本地，墓碑里的条目会被过滤。
+  Future<void> _restoreFromCloud() async {
     if (!AuthService.instance.isLoggedIn) {
       _snack('请先在「我的」页登录');
       return;
@@ -191,18 +195,34 @@ class _AnalysisPageState extends State<AnalysisPage>
     if (_syncing) return;
     setState(() => _syncing = true);
     try {
-      // 先尽力把墓碑里的项目从云端删干净。
+      // 1) 恢复整机方案。
+      for (final id in _planPendingDeletes.toList()) {
+        try {
+          await CloudSync.deletePlan(id);
+        } catch (_) {}
+      }
+      final cloudPlans = await CloudSync.downloadPlans();
+      final cloudPlanIds = cloudPlans.map((p) => p.id).toSet();
+      _planPendingDeletes.removeWhere((id) => !cloudPlanIds.contains(id));
+      await _planStore.savePendingDeleteIds(_planPendingDeletes);
+      final visiblePlans = cloudPlans
+          .where((p) => !_planPendingDeletes.contains(p.id))
+          .toList();
+      final existingPlanIds = _plans.map((p) => p.id).toSet();
+      final freshPlans = visiblePlans
+          .where((p) => !existingPlanIds.contains(p.id))
+          .toList();
+
+      // 2) 恢复自定义项目。
       for (final id in _pendingDeletes.toList()) {
         try {
           await CloudSync.deleteCustomItem(id);
         } catch (_) {}
       }
-
       final cloud = await CloudSync.downloadCustomItems();
       final cloudIds = cloud.map((c) => c.id).toSet();
       _pendingDeletes.removeWhere((id) => !cloudIds.contains(id));
       await _customStore.savePendingDeleteIds(_pendingDeletes);
-
       final visible = cloud
           .where((c) => !_pendingDeletes.contains(c.id))
           .toList();
@@ -214,8 +234,19 @@ class _AnalysisPageState extends State<AnalysisPage>
           added++;
         }
       }
+
+      // 落盘并刷新界面（_reloadCustoms 的 setState 会一并带上新的 _plans）。
+      if (freshPlans.isNotEmpty) {
+        _plans = [..._plans, ...freshPlans];
+        await _planStore.saveAll(_plans);
+      }
       await _reloadCustoms();
-      _snack(added == 0 ? '云端自定义项目已在本地' : '已从云恢复 $added 个项目');
+
+      final parts = <String>[
+        if (freshPlans.isNotEmpty) '${freshPlans.length} 个方案',
+        if (added > 0) '$added 个项目',
+      ];
+      _snack(parts.isEmpty ? '云端数据已在本地' : '已从云恢复 ${parts.join('、')}');
     } catch (e) {
       _snack(e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -297,8 +328,8 @@ class _AnalysisPageState extends State<AnalysisPage>
           ),
           IconButton(
             icon: const Icon(Icons.cloud_download_outlined),
-            tooltip: '从云恢复',
-            onPressed: _downloadCustomsFromCloud,
+            tooltip: '从云恢复方案与项目',
+            onPressed: _restoreFromCloud,
           ),
           IconButton(
             icon: const Icon(Icons.add),

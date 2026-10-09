@@ -30,8 +30,8 @@ class _HomeShellState extends State<HomeShell> {
     final scheme = Theme.of(context).colorScheme;
     final pages = [
       ListPlanPage(isActive: _index == 0),
+      AnalysisPage(isActive: _index == 1),
       const CatalogPage(),
-      AnalysisPage(isActive: _index == 2),
       const ProfilePage(),
     ];
     return Scaffold(
@@ -67,7 +67,7 @@ class _HomeShellState extends State<HomeShell> {
 /// 底部导航项：图标 + 文案（Lucide 线性图标）。
 const _kNavItems = <LiquidGlassBarItem>[
   LiquidGlassBarItem(icon: Icon(LucideIcons.clipboard_list), label: '清单'),
-  LiquidGlassBarItem(icon: Icon(LucideIcons.library), label: '硬件库'),
   LiquidGlassBarItem(icon: Icon(LucideIcons.chart_bar), label: '分析'),
+  LiquidGlassBarItem(icon: Icon(LucideIcons.library), label: '硬件库'),
   LiquidGlassBarItem(icon: Icon(LucideIcons.user), label: '我的'),
 ];

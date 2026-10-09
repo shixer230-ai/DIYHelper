@@ -489,11 +489,6 @@ class ProfilePage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showVersionLog(context),
           ),
-          const ListTile(
-            leading: Icon(Icons.widgets_outlined),
-            title: Text('DIYAss'),
-            subtitle: Text('帮你从 CPU / 显卡到整机方案，挑出最划算的配置'),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
             child: Row(

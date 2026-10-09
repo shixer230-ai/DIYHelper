@@ -2,7 +2,7 @@
 // 版本号与署名在此统一维护，避免多处写死导致不一致。
 
 /// 当前对外版本号（显示在「我的」页）。
-const String kAppVersion = '2.0.1';
+const String kAppVersion = '2.1.0';
 
 /// 版本更新日志，最新的排在最前。
 class VersionLogEntry {
@@ -13,6 +13,14 @@ class VersionLogEntry {
 }
 
 const List<VersionLogEntry> kVersionLog = [
+  VersionLogEntry('2.1.0', [
+    'AI 分析改用云函数安全代理：登录校验 + 每人每天限流 + 云端 Key 调 DeepSeek，Key 不再打进安装包',
+    '新增「可靠性分析」：AI 检测功耗稳定性、魔改 CPU / 矿卡 / 洋垃圾等硬件稳定性风险',
+    'AI 分析与可靠性分析改为从方案列表自选要分析的方案（不再只分析排名第一）',
+    '硬件库补入英特尔洋垃圾 Xeon E5 / E3 系列 CPU 及配套 X99 主板',
+    '选硬件界面改为品牌分类 + 大圆角卡片，与整机方案 / 硬件库风格统一',
+    '移除「关于 DIYAss」介绍，底部导航「分析」「硬件库」顺序调整',
+  ]),
   VersionLogEntry('2.0.1', [
     '硬件库补入 Intel Arc 独立显卡（A380 / A580 / A750 / A770 / B580 / B570）',
     '内存扩充：新增 DDR3 及 64GB / 48GB / 96GB 大容量型号',

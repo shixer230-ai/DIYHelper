@@ -222,14 +222,126 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
         if (_library.isEmpty)
           _emptyHint(theme, '硬件库里还没有「${widget.category}」')
         else
-          for (final spec in _library) _specCard(theme, spec),
+          for (final sec in _specBrandSections(_library))
+            _specBrandCard(theme, sec.brand, sec.specs),
         const SizedBox(height: 8),
         _sectionTitle(theme, '从我的清单选'),
         if (_items.isEmpty)
           _emptyHint(theme, '清单里还没有「${widget.category}」')
         else
-          for (final item in _items) _itemCard(theme, item),
+          for (final sec in _itemBrandSections(_items))
+            _itemBrandCard(theme, sec.brand, sec.items),
       ],
+    );
+  }
+
+  /// 硬件库型号按品牌分组（主流品牌在前，其余归「其它」），与硬件库页一致。
+  List<({String brand, List<HardwareSpec> specs})> _specBrandSections(
+    List<HardwareSpec> specs,
+  ) {
+    final mains = kBrandGroups[widget.category] ?? const <String>[];
+    final sections = <({String brand, List<HardwareSpec> specs})>[];
+    for (final brand in [...mains, '其它']) {
+      final list =
+          specs
+              .where((s) => brandGroupOf(widget.category, s.brand) == brand)
+              .toList()
+            ..sort((a, b) => a.model.compareTo(b.model));
+      if (list.isNotEmpty) sections.add((brand: brand, specs: list));
+    }
+    return sections;
+  }
+
+  /// 我的清单条目按品牌分组（与硬件库一致）。
+  List<({String brand, List<HardwareItem> items})> _itemBrandSections(
+    List<HardwareItem> items,
+  ) {
+    final mains = kBrandGroups[widget.category] ?? const <String>[];
+    final sections = <({String brand, List<HardwareItem> items})>[];
+    for (final brand in [...mains, '其它']) {
+      final list =
+          items
+              .where((i) => brandGroupOf(widget.category, i.brand) == brand)
+              .toList()
+            ..sort((a, b) => a.model.compareTo(b.model));
+      if (list.isNotEmpty) sections.add((brand: brand, items: list));
+    }
+    return sections;
+  }
+
+  /// 品牌分组大圆角卡片（硬件库型号）：顶部品牌名，下面每型号一行。
+  Widget _specBrandCard(ThemeData theme, String brand, List<HardwareSpec> specs) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              brand,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+          for (var i = 0; i < specs.length; i++) ...[
+            if (i > 0) const Divider(height: 1, indent: 16),
+            ListTile(
+              leading: CategoryBadge(category: specs[i].category),
+              title: Text(specs[i].model),
+              subtitle: Text(specs[i].brand),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _pickSpec(specs[i]),
+            ),
+          ],
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  /// 品牌分组大圆角卡片（我的清单条目）：顶部品牌名，下面每条目一行（带价格）。
+  Widget _itemBrandCard(ThemeData theme, String brand, List<HardwareItem> items) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              brand,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const Divider(height: 1, indent: 16),
+            ListTile(
+              leading: CategoryBadge(category: items[i].category),
+              title: Text(items[i].model),
+              subtitle: Text(
+                items[i].brand.isEmpty
+                    ? items[i].platform
+                    : '${items[i].brand} · ${items[i].platform}',
+              ),
+              trailing: Text(
+                '¥${_fmt(items[i].price)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              onTap: () => _pickItem(items[i]),
+            ),
+          ],
+          const SizedBox(height: 4),
+        ],
+      ),
     );
   }
 

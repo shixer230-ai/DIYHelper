@@ -33,3 +33,6 @@ bin/
 # IDE / IntelliJ
 .idea/
 *.iml
+
+# 云函数部署产物（zip 由 index.js + package.json 打包生成，不入库）
+cloudfunctions/aiChat/aiChat.zip

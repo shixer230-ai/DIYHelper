@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_bottom_navbar_plus/liquid_glass_bottom_navbar_plus.dart';
 
+import '../ai/ai_analysis.dart';
 import '../analysis/value_index.dart';
 import '../cloud/auth_service.dart';
 import '../cloud/cloud_sync.dart';
@@ -11,6 +13,7 @@ import '../storage/build_plan_store.dart';
 import '../storage/custom_item_store.dart';
 import '../storage/user_spec_store.dart';
 import '../theme/app_theme.dart';
+import 'ai_analysis_page.dart';
 import 'custom_item_form_page.dart';
 
 /// 分析页：按所选「性价比项目」（内置跑分/功耗 + 自定义项目）给整机方案排行。
@@ -37,6 +40,7 @@ class _AnalysisPageState extends State<AnalysisPage>
   String? _customId; // 选中的自定义项目 id（null = 没选自定义）
   bool _loading = true;
   bool _syncing = false; // 云同步防连点
+  int _mode = 0; // 0=性价比排行，1=AI 分析，2=可靠性分析
   Set<String> _pendingDeletes = {}; // 待补删云端的自定义项目 id
   Set<String> _planPendingDeletes = {}; // 待补删云端的方案 id（与整机方案页共用墓碑）
 
@@ -266,6 +270,28 @@ class _AnalysisPageState extends State<AnalysisPage>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  /// 打开 AI 分析（需登录；分析用户选中的某个方案）。
+  /// API Key 在云函数里，这里不再解析 key，直接进分析页由云函数代调用。
+  void _openAiAnalysis(BuildPlan plan, {required String mode}) {
+    if (!AuthService.instance.isLoggedIn) {
+      _snack('AI 分析需要登录，请先在「我的」页注册/登录');
+      return;
+    }
+    final prompt = mode == 'reliability'
+        ? buildReliabilityPrompt(plan)
+        : buildPlanPrompt(plan);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AiAnalysisPage(
+          title: plan.name.isEmpty ? '未命名方案' : plan.name,
+          prompt: prompt,
+          mode: mode,
+        ),
+      ),
+    );
+  }
+
   // ---- 分数 ----
 
   Future<void> _saveScore(CustomItem item, String planId, double? value) async {
@@ -283,24 +309,118 @@ class _AnalysisPageState extends State<AnalysisPage>
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
               bottom: false,
-              child: NestedScrollView(
-                headerSliverBuilder: (context, innerBoxIsScrolled) => [
-                  SliverAppBar(
-                    pinned: false,
-                    floating: false,
-                    backgroundColor: Colors.transparent,
-                    surfaceTintColor: Colors.transparent,
-                    title: const Text('性价比分析'),
-                  ),
-                ],
-                body: Column(
-                  children: [
+              // 与「清单」页顶部一致的固定布局：液态玻璃分段放在非滚动区域。
+              // 之前放进 NestedScrollView 里，滑动时 BackdropFilter 采样区域跟着
+              // 移动导致渲染出错；改成固定 Column 后分段不再随内容滚动，恢复正常。
+              child: Column(
+                children: [
+                  _glassSegmented(theme),
+                  if (_mode == 0) ...[
                     _selector(theme),
                     Expanded(child: _body(theme)),
-                  ],
-                ),
+                  ] else if (_mode == 1)
+                    Expanded(child: _aiView(theme))
+                  else
+                    Expanded(child: _reliabilityView(theme)),
+                ],
               ),
             ),
+    );
+  }
+
+  /// 顶部液态玻璃分段（与「清单」顶部分段一致）：性价比排行 / AI 分析 / 可靠性分析。
+  Widget _glassSegmented(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: LiquidGlassBottomBar(
+        items: const [
+          LiquidGlassBarItem(label: '性价比排行'),
+          LiquidGlassBarItem(label: 'AI 分析'),
+          LiquidGlassBarItem(label: '可靠性分析'),
+        ],
+        selectedIndex: _mode,
+        onDestinationSelected: (i) => setState(() => _mode = i),
+        height: 48,
+        margin: EdgeInsets.zero,
+        applyBottomInset: false,
+        theme: LiquidGlassBarTheme(
+          iconColor: scheme.onSurfaceVariant,
+          selectedIconColor: scheme.primary,
+          labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          selectedLabelStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          pillColor: scheme.primary.withValues(alpha: 0.14),
+          showLabels: true,
+        ),
+      ),
+    );
+  }
+
+  /// AI 分析模式：列出所有方案，用户点一个进入常规分析。
+  Widget _aiView(ThemeData theme) => _planPicker(
+        theme,
+        mode: 'general',
+        icon: Icons.auto_awesome,
+        hint: '选择一个方案，AI 会分析它的亮点、侧重、局限与超频稳定性',
+      );
+
+  /// 可靠性分析模式：列出所有方案，用户点一个进入可靠性分析。
+  Widget _reliabilityView(ThemeData theme) => _planPicker(
+        theme,
+        mode: 'reliability',
+        icon: Icons.verified_user_outlined,
+        hint: '选择一个方案，AI 会检测功耗稳定性、魔改 CPU / 矿卡等硬件风险',
+      );
+
+  /// 方案选择列表（AI 分析 / 可靠性分析共用）：一行一个方案，点按进入对应分析。
+  Widget _planPicker(
+    ThemeData theme, {
+    required String mode,
+    required IconData icon,
+    required String hint,
+  }) {
+    if (_plans.isEmpty) return _empty(theme);
+    return ListView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        12 + bottomNavClearance(context),
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+          child: Text(
+            hint,
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+        ),
+        for (final plan in _plans) _planCard(theme, plan, mode, icon),
+      ],
+    );
+  }
+
+  /// 方案选择卡片：方案名 + 配件数 + 总价，点按进入分析。
+  Widget _planCard(ThemeData theme, BuildPlan plan, String mode, IconData icon) {
+    final name = plan.name.isEmpty ? '未命名方案' : plan.name;
+    final count = plan.components.length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Card(
+        child: ListTile(
+          onTap: () => _openAiAnalysis(plan, mode: mode),
+          leading: Icon(icon, color: theme.colorScheme.primary),
+          title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text('$count 个配件 · 整机 ¥${_fmt(plan.total)}'),
+          trailing: const Icon(Icons.chevron_right),
+        ),
+      ),
     );
   }
 
@@ -332,6 +452,11 @@ class _AnalysisPageState extends State<AnalysisPage>
                 onChanged: _onChoiceChanged,
               ),
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.auto_awesome),
+            tooltip: 'AI 分析',
+            onPressed: () => setState(() => _mode = 1),
           ),
           IconButton(
             icon: const Icon(Icons.add),

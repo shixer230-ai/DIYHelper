@@ -8,7 +8,8 @@ import '../theme/app_theme.dart';
 
 const _categories = ['CPU', '主板', '显卡', '内存', '硬盘', '电源', '机箱', '其他'];
 
-/// 自定义添加硬件型号到「我的添加」：填品类、型号、品牌、参数规格和跑分。
+/// 自定义添加硬件型号到「我的添加」：填品类、型号、品牌、参数规格和性价比跑分。
+/// 全部字段合并为一张大圆角卡片，字段间用横线分割，不再用胶囊输入框。
 class UserSpecFormPage extends StatefulWidget {
   const UserSpecFormPage({super.key});
 
@@ -30,7 +31,6 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
       [...(kBrandGroups[_category] ?? const <String>[]), '其它'];
 
   final List<_EntryPair> _specPairs = [];
-  final List<_EntryPair> _benchPairs = [];
   final Map<String, TextEditingController> _valueControllers = {};
   final _powerController = TextEditingController();
 
@@ -41,9 +41,8 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
   @override
   void initState() {
     super.initState();
-    // 各给一行空输入，方便直接填写。
+    // 给一行空输入，方便直接填写。
     _specPairs.add(_EntryPair());
-    _benchPairs.add(_EntryPair());
     for (final item in kValueItems) {
       _valueControllers[item.label] = TextEditingController();
     }
@@ -55,9 +54,6 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     _modelController.dispose();
     _powerController.dispose();
     for (final p in _specPairs) {
-      p.dispose();
-    }
-    for (final p in _benchPairs) {
       p.dispose();
     }
     for (final c in _valueControllers.values) {
@@ -106,7 +102,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
       brand: _brand,
       model: _modelController.text.trim(),
       specs: [..._collect(_specPairs), ..._collectPower()],
-      benchmarks: [..._collect(_benchPairs), ..._collectValueBenches()],
+      benchmarks: _collectValueBenches(),
     );
     setState(() => _saving = true);
     await _store.add(spec);
@@ -114,8 +110,22 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     Navigator.pop(context, true);
   }
 
+  /// 统一的无边框、无填充输入样式：把胶囊输入框换成大卡片内的纯行。
+  InputDecoration _plain(String label, {String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      filled: false,
+      isDense: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('自定义添加硬件')),
       body: Form(
@@ -130,13 +140,14 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
                   vertical: 8,
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    GlassDropdown<String>(
+                    DropdownButtonFormField<String>(
                       initialValue: _category,
-                      decoration: const InputDecoration(
-                        labelText: '品类',
-                        border: InputBorder.none,
-                      ),
+                      isExpanded: true,
+                      dropdownColor: scheme.surface,
+                      borderRadius: BorderRadius.circular(kCardRadius),
+                      decoration: _plain('品类'),
                       items: _categories
                           .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                           .toList(),
@@ -149,53 +160,43 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
                     const Divider(height: 1),
                     TextFormField(
                       controller: _modelController,
-                      decoration: const InputDecoration(
-                        labelText: '型号 *',
-                        hintText: '例如：i5-13600KF / RTX 3060',
-                        border: InputBorder.none,
-                      ),
+                      decoration: _plain('型号 *', hint: '例如：i5-13600KF / RTX 3060'),
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? '请填写型号' : null,
                     ),
                     const Divider(height: 1),
-                    GlassDropdown<String>(
+                    DropdownButtonFormField<String>(
                       // 品类变化时用 key 重建，让品牌回退到该品类首个主流品牌。
                       key: ValueKey(_category),
                       initialValue: _brand,
-                      decoration: const InputDecoration(
-                        labelText: '品牌',
-                        border: InputBorder.none,
-                      ),
+                      isExpanded: true,
+                      dropdownColor: scheme.surface,
+                      borderRadius: BorderRadius.circular(kCardRadius),
+                      decoration: _plain('品牌'),
                       items: _brandOptions
                           .map((b) => DropdownMenuItem(value: b, child: Text(b)))
                           .toList(),
                       onChanged: (v) => setState(() => _brand = v!),
                     ),
+                    const Divider(height: 1),
+                    _entryEditor(
+                      title: '参数规格',
+                      hint: '例如：核心/线程 → 8核16线程',
+                      pairs: _specPairs,
+                    ),
+                    if (_valueItems.isNotEmpty) ...[
+                      const Divider(height: 1),
+                      _valueBenchEditor(),
+                    ],
+                    if (_powerLabel != null) ...[
+                      const Divider(height: 1),
+                      _powerEditor(),
+                    ],
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            _entryEditor(
-              title: '参数规格',
-              hint: '例如：核心/线程 → 8核16线程',
-              pairs: _specPairs,
-            ),
-            const SizedBox(height: 24),
-            _entryEditor(
-              title: '跑分',
-              hint: '例如：3DMark Time Spy → 约 10500',
-              pairs: _benchPairs,
-            ),
-            if (_valueItems.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              _valueBenchEditor(),
-            ],
-            if (_powerLabel != null) ...[
-              const SizedBox(height: 24),
-              _powerEditor(),
-            ],
-            const SizedBox(height: 32),
             FilledButton(
               onPressed: _saving ? null : _save,
               // 胶囊 + 半透明材质，和清单页「保存」等主按钮保持一致。
@@ -214,153 +215,119 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     required List<_EntryPair> pairs,
   }) {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
+            Expanded(
+              child: Text(
+                title,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => setState(() => pairs.add(_EntryPair())),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('添加一项'),
+            ),
+          ],
+        ),
+        Text(
+          hint,
+          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        for (final p in pairs)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    title,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
+                  child: TextField(
+                    controller: p.label,
+                    decoration: _plain('名称', hint: '如：核心/线程'),
                   ),
                 ),
-                TextButton.icon(
-                  onPressed: () => setState(() => pairs.add(_EntryPair())),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('添加一项'),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: p.value,
+                    decoration: _plain('数值', hint: '如：8核16线程'),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    pairs.remove(p);
+                    p.dispose();
+                    setState(() {});
+                  },
+                  tooltip: '删除这项',
+                  icon: const Icon(Icons.close, size: 20),
                 ),
               ],
             ),
-            Text(
-              hint,
-              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            for (final p in pairs)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: p.label,
-                        decoration: const InputDecoration(
-                          labelText: '名称',
-                          hintText: '如：核心/线程',
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: p.value,
-                        decoration: const InputDecoration(
-                          labelText: '数值',
-                          hintText: '如：8核16线程',
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        pairs.remove(p);
-                        p.dispose();
-                        setState(() {});
-                      },
-                      tooltip: '删除这项',
-                      icon: const Icon(Icons.close, size: 20),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
+
   /// 性价比跑分：按当前品类列出「分析」用的跑分项，label 固定，只填数值（可跳过）。
   Widget _valueBenchEditor() {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '性价比跑分（用于「分析」排行）',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            Text(
-              '填了这几项，这个型号就能参与「分析」页的性价比排行；不填可跳过',
-              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            for (final item in _valueItems)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: TextField(
-                  controller: _valueControllers[item.label],
-                  decoration: InputDecoration(
-                    labelText: item.label,
-                    hintText: '如：约 10500',
-                    border: InputBorder.none,
-                    isDense: true,
-                  ),
-                ),
-              ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '性价比跑分（用于「分析」排行）',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
         ),
-      ),
+        Text(
+          '填了这几项，这个型号就能参与「分析」页的性价比排行；不填可跳过',
+          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        for (final item in _valueItems)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TextField(
+              controller: _valueControllers[item.label],
+              decoration: _plain(item.label, hint: '如：约 10500'),
+            ),
+          ),
+      ],
     );
   }
 
   /// 功耗：CPU/显卡 填了才能参与「分析」的整机功耗排行（可跳过）。
   Widget _powerEditor() {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '功耗（用于「分析」整机功耗排行）',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            Text(
-              '填了功耗，这个型号就能参与「分析」页的整机功耗排行；不填可跳过',
-              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _powerController,
-              decoration: const InputDecoration(
-                labelText: '功耗',
-                hintText: '如：65W / 450W',
-                border: InputBorder.none,
-                isDense: true,
-              ),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '功耗（用于「分析」整机功耗排行）',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
         ),
-      ),
+        Text(
+          '填了功耗，这个型号就能参与「分析」页的整机功耗排行；不填可跳过',
+          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _powerController,
+          decoration: _plain('功耗', hint: '如：65W / 450W'),
+        ),
+      ],
     );
   }
 }

@@ -71,6 +71,11 @@ class _AnalysisPageState extends State<AnalysisPage>
       _planPendingDeletes = planPending;
       _loading = false;
     });
+
+    // 已登录时自动从云同步（替代原先手动点「从云恢复」按钮）。
+    if (AuthService.instance.isLoggedIn) {
+      _restoreFromCloud(silent: true);
+    }
   }
 
   Future<void> _reloadCustoms() async {
@@ -187,9 +192,9 @@ class _AnalysisPageState extends State<AnalysisPage>
 
   /// 从云拉取数据：先恢复整机方案（分析排行要用），再恢复自定义项目（分数按方案 id 关联）。
   /// 两边都按 id 去重并入本地，墓碑里的条目会被过滤。
-  Future<void> _restoreFromCloud() async {
+  Future<void> _restoreFromCloud({bool silent = false}) async {
     if (!AuthService.instance.isLoggedIn) {
-      _snack('请先在「我的」页登录');
+      if (!silent) _snack('请先在「我的」页登录');
       return;
     }
     if (_syncing) return;
@@ -242,13 +247,15 @@ class _AnalysisPageState extends State<AnalysisPage>
       }
       await _reloadCustoms();
 
-      final parts = <String>[
-        if (freshPlans.isNotEmpty) '${freshPlans.length} 个方案',
-        if (added > 0) '$added 个项目',
-      ];
-      _snack(parts.isEmpty ? '云端数据已在本地' : '已从云恢复 ${parts.join('、')}');
+      if (!silent) {
+        final parts = <String>[
+          if (freshPlans.isNotEmpty) '${freshPlans.length} 个方案',
+          if (added > 0) '$added 个项目',
+        ];
+        _snack(parts.isEmpty ? '云端数据已在本地' : '已从云恢复 ${parts.join('、')}');
+      }
     } catch (e) {
-      _snack(e.toString().replaceFirst('Exception: ', ''));
+      if (!silent) _snack(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
@@ -325,11 +332,6 @@ class _AnalysisPageState extends State<AnalysisPage>
                 onChanged: _onChoiceChanged,
               ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.cloud_download_outlined),
-            tooltip: '从云恢复方案与项目',
-            onPressed: _restoreFromCloud,
           ),
           IconButton(
             icon: const Icon(Icons.add),

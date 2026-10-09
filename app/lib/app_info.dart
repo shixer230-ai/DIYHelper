@@ -2,7 +2,7 @@
 // 版本号与署名在此统一维护，避免多处写死导致不一致。
 
 /// 当前对外版本号（显示在「我的」页）。
-const String kAppVersion = '2.0.0';
+const String kAppVersion = '2.0.1';
 
 /// 版本更新日志，最新的排在最前。
 class VersionLogEntry {
@@ -13,6 +13,14 @@ class VersionLogEntry {
 }
 
 const List<VersionLogEntry> kVersionLog = [
+  VersionLogEntry('2.0.1', [
+    '硬件库补入 Intel Arc 独立显卡（A380 / A580 / A750 / A770 / B580 / B570）',
+    '内存扩充：新增 DDR3 及 64GB / 48GB / 96GB 大容量型号',
+    '硬盘扩充：新增 SATA 固态与 3.5寸机械硬盘（希捷 / 东芝）',
+    '按 2012 年及以后 CPU 补齐对应插槽的主板（LGA1155 / 1150 / 1151 / 1200 / 1851、AM3+）',
+    '分析页云同步改为进入页面自动同步（移除手动「从云恢复」按钮）',
+    '「自定义添加硬件」表单合并为一张大卡片，删除胶囊输入框与自由「跑分」（只留性价比跑分）',
+  ]),
   VersionLogEntry('2.0.0', [
     '正式版 2.0.0：退出 Beta，后续将逐步引入 AI 分析功能',
     '应用更名 DIYAss，更换全新应用图标',

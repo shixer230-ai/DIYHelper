@@ -4,12 +4,12 @@ import 'package:liquid_glass_bottom_navbar_plus/liquid_glass_bottom_navbar_plus.
 import 'build_plan_page.dart';
 import 'hardware_list_page.dart';
 
-/// 「清单 / 整机方案」合并页：顶部用胶囊分段控件切换两个视图。
-/// 原底部导航的「清单」和「整机方案」两个入口合并到这里。
+/// 「清单 / 整机方案」合并页：顶部用胶囊分段控件切换两个视图
+/// 原底部导航的「清单」和「整机方案」两个入口合并到这里
 class ListPlanPage extends StatefulWidget {
   const ListPlanPage({super.key, this.isActive = true});
 
-  /// 当前是否为底部导航选中的标签页；切回来时用于刷新对应分段的数据。
+  /// 当前是否为底部导航选中的标签页；切回来时用于刷新对应分段的数据
   final bool isActive;
 
   @override
@@ -47,7 +47,7 @@ class _ListPlanPageState extends State<ListPlanPage>
         bottom: false,
         child: Column(
           children: [
-            // 顶部胶囊分段：硬件清单 / 整机方案（与底部导航同款液态玻璃）。
+            // 顶部胶囊分段：硬件清单 / 整机方案（与底部导航同款液态玻璃）
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
               child: LiquidGlassBottomBar(

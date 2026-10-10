@@ -1,29 +1,29 @@
 import 'package:flutter/material.dart';
 
-/// 预设主题色（用户可在「我的」页一键切换）。
+/// 预设主题色（用户可在「我的」页一键切换）
 const Color kDefaultSeed = Color(0xFFEC4899);
 
-/// 卡片圆角半径：各页卡片共用，增大到与底部胶囊导航栏（kNavBarRadius）一致。
+/// 卡片圆角半径：各页卡片共用，增大到与底部胶囊导航栏（kNavBarRadius）一致
 const double kCardRadius = 34;
 
-/// 底部导航外层胶囊的圆角：NavigationBar 高 68，取半高即胶囊形。
+/// 底部导航外层胶囊的圆角：NavigationBar 高 68，取半高即胶囊形
 const double kNavBarRadius = 34;
 
 /// 底部导航悬浮在内容上方时，内容底部需预留的高度：
-/// 导航高 68 + 上边距 8 + 下边距 12 = 88（系统底部安全区另算）。
+/// 导航高 68 + 上边距 8 + 下边距 12 = 88（系统底部安全区另算）
 const double kNavOverlaySpace = 88;
 
-/// 底部导航悬浮时，内容底部需预留的总高度（含系统底部安全区）。
+/// 底部导航悬浮时，内容底部需预留的总高度（含系统底部安全区）
 double bottomNavClearance(BuildContext context) =>
     kNavOverlaySpace + MediaQuery.paddingOf(context).bottom;
 
 /// 主操作按钮统一风格：胶囊圆角 + 半透明底色（透明圆角），
-/// 用于「加入我的清单」「保存到我的清单」等主要按钮，保证观感一致。
+/// 用于「加入我的清单」「保存到我的清单」等主要按钮，保证观感一致
 ButtonStyle capsuleButtonStyle(ThemeData theme, {bool fullWidth = true}) {
   final scheme = theme.colorScheme;
   return FilledButton.styleFrom(
     // 列表/底栏里的主按钮默认占满宽度；空状态等居中场景传 fullWidth: false，
-    // 让按钮按内容自适应宽度，避免被拉成一条过长的「条」。
+    // 让按钮按内容自适应宽度，避免被拉成一条过长的「条」
     minimumSize: fullWidth ? const Size.fromHeight(48) : const Size(0, 48),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(kCardRadius),
@@ -36,7 +36,7 @@ ButtonStyle capsuleButtonStyle(ThemeData theme, {bool fullWidth = true}) {
 }
 
 /// 次级操作按钮统一风格：与主按钮同款胶囊圆角 + 半透明底色 + 细描边，
-/// 用于「加入我的添加」等次要按钮，观感与主按钮一致（玻璃描边版）。
+/// 用于「加入我的添加」等次要按钮，观感与主按钮一致（玻璃描边版）
 ButtonStyle capsuleOutlinedButtonStyle(ThemeData theme) {
   final scheme = theme.colorScheme;
   return OutlinedButton.styleFrom(
@@ -51,8 +51,8 @@ ButtonStyle capsuleOutlinedButtonStyle(ThemeData theme) {
   );
 }
 
-/// 玻璃风格外壳：半透明渐变 + 细描边 + 顶部高光，模拟磨砂玻璃质感。
-/// 不用 BackdropFilter（实时模糊在滚动时会闪烁），故改为「假玻璃」方案。
+/// 玻璃风格外壳：半透明渐变 + 细描边 + 顶部高光，模拟磨砂玻璃质感
+/// 不用 BackdropFilter（实时模糊在滚动时会闪烁），故改为「假玻璃」方案
 class GlassField extends StatelessWidget {
   const GlassField({
     super.key,
@@ -77,7 +77,7 @@ class GlassField extends StatelessWidget {
               border: Border.all(
                 color: scheme.outlineVariant.withValues(alpha: 0.6),
               ),
-              // 半透明玻璃底：从上到下略变淡，模拟玻璃厚度。
+              // 半透明玻璃底：从上到下略变淡，模拟玻璃厚度
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -89,7 +89,7 @@ class GlassField extends StatelessWidget {
             ),
             child: child,
           ),
-          // 顶部一条细高光，模拟玻璃反光。
+          // 顶部一条细高光，模拟玻璃反光
           Positioned(
             left: 0,
             right: 0,
@@ -119,8 +119,8 @@ class GlassField extends StatelessWidget {
   }
 }
 
-/// 玻璃风下拉框：展开菜单用表面色 + 胶囊圆角，替代原生下拉菜单的方角白底样式。
-/// 用法与 DropdownButtonFormField 一致，仅多一层统一的菜单外观。
+/// 玻璃风下拉框：展开菜单用表面色 + 胶囊圆角，替代原生下拉菜单的方角白底样式
+/// 用法与 DropdownButtonFormField 一致，仅多一层统一的菜单外观
 class GlassDropdown<T> extends StatelessWidget {
   const GlassDropdown({
     super.key,
@@ -157,7 +157,6 @@ class GlassDropdown<T> extends StatelessWidget {
   }
 }
 
-/// 一个可选的预设主色。
 class SeedOption {
   const SeedOption(this.name, this.color);
 
@@ -165,7 +164,7 @@ class SeedOption {
   final Color color;
 }
 
-/// 预设色卡：默认玫瑰粉 + 7 个常用色，贴合国内 app 的柔和配色。
+/// 预设色卡：默认玫瑰粉 + 7 个常用色，贴合国内 app 的柔和配色
 const List<SeedOption> kSeedOptions = [
   SeedOption('玫瑰粉', Color(0xFFEC4899)),
   SeedOption('天空蓝', Color(0xFF3B82F6)),
@@ -177,18 +176,17 @@ const List<SeedOption> kSeedOptions = [
   SeedOption('深邃靛', Color(0xFF6366F1)),
 ];
 
-/// 卡片圆角。
 const _cardRadius = BorderRadius.all(Radius.circular(kCardRadius));
 
-/// 输入框圆角：胶囊形（与全站胶囊风格一致，取值足够大保证两端全圆）。
+/// 输入框圆角：胶囊形（与全站胶囊风格一致，取值足够大保证两端全圆）
 const _inputRadius = BorderRadius.all(Radius.circular(999));
 
 /// 淡入淡出转场（非对称）：
 /// - 入栈：新页淡入、旧页淡出（旧页连同底部液态玻璃导航一起淡出，不残留）；
-/// - 出栈：当前页淡出，下层旧页保持不透明（玻璃不会「淡入消失」）。
+/// - 出栈：当前页淡出，下层旧页保持不透明（玻璃不会「淡入消失」）
 ///
 /// 旧页用 secondaryAnimation 淡出，但反向（被重新露出）时用阈值曲线立即回到
-/// 不透明，从而兼顾「入栈玻璃一起淡出」和「返回时玻璃不闪现」。
+/// 不透明，从而兼顾「入栈玻璃一起淡出」和「返回时玻璃不闪现」
 class FadePageTransitionsBuilder extends PageTransitionsBuilder {
   const FadePageTransitionsBuilder();
 
@@ -200,14 +198,14 @@ class FadePageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    // 本页随自身 animation 淡入/淡出（入栈 0→1、出栈 1→0）。
+    // 本页随自身 animation 淡入/淡出（入栈 0→1、出栈 1→0）
     final incoming = FadeTransition(
       opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
       child: child,
     );
 
     // 被新页压住时（secondaryAnimation 0→1）淡出；被重新露出时（1→0）
-    // 用 Threshold(1.0) 让中间值直接归 0 → 完全不动，避免玻璃淡入闪现。
+    // 用 Threshold(1.0) 让中间值直接归 0 → 完全不动，避免玻璃淡入闪现
     final outgoing = FadeTransition(
       opacity: Tween<double>(begin: 1.0, end: 0.0).animate(
         CurvedAnimation(
@@ -231,7 +229,7 @@ ThemeData buildLightTheme({
   return _base(scheme, transparentBackground).copyWith(
     scaffoldBackgroundColor:
         transparentBackground ? Colors.transparent : const Color(0xFFFDF8FB),
-    // 卡片用纯白，和偏暖白的背景拉开层次。
+    // 卡片用纯白，和偏暖白的背景拉开层次
     colorScheme: scheme.copyWith(surface: Colors.white),
   );
 }
@@ -272,7 +270,7 @@ ThemeData _base(ColorScheme scheme, bool transparentBackground) {
       ),
     ),
     cardTheme: CardThemeData(
-      // 卡片半透明，和「分析项目」输入框一致（fillColor 0.5 透明度），让背景图透出。
+      // 卡片半透明，和「分析项目」输入框一致（fillColor 0.5 透明度），让背景图透出
       color: scheme.surface.withValues(alpha: 0.5),
       elevation: 0,
       shape: const RoundedRectangleBorder(borderRadius: _cardRadius),
@@ -300,12 +298,12 @@ ThemeData _base(ColorScheme scheme, bool transparentBackground) {
       elevation: 0,
       height: 68,
       indicatorColor: scheme.primaryContainer,
-      // 选中指示器用圆形（内层小圆块）。
+      // 选中指示器用圆形（内层小圆块）
       indicatorShape: const CircleBorder(),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      // 与卡片 / 主按钮统一：胶囊圆角 + 半透明底色，「保存成功」等提示观感一致。
+      // 与卡片 / 主按钮统一：胶囊圆角 + 半透明底色，「保存成功」等提示观感一致
       backgroundColor: scheme.surface.withValues(alpha: 0.6),
       contentTextStyle: TextStyle(color: scheme.onSurface),
       shape: RoundedRectangleBorder(
@@ -317,7 +315,7 @@ ThemeData _base(ColorScheme scheme, bool transparentBackground) {
         borderRadius: BorderRadius.all(Radius.circular(20)),
       ),
     ),
-    // 弹出菜单（PopupMenuButton / showMenu）统一胶囊圆角 + 表面色，去掉原生直角菜单。
+    // 弹出菜单（PopupMenuButton / showMenu）统一胶囊圆角 + 表面色，去掉原生直角菜单
     popupMenuTheme: PopupMenuThemeData(
       color: scheme.surface,
       elevation: 4,
@@ -332,7 +330,7 @@ ThemeData _base(ColorScheme scheme, bool transparentBackground) {
       ),
     ),
     // 转场用「纯滑动、无淡入淡出」：既不会因透明底露黑，也不会让页面（含液态玻璃）
-    // 在跳转时淡成透明——返回录入页等场景下玻璃不会再短暂消失。
+    // 在跳转时淡成透明——返回录入页等场景下玻璃不会再短暂消失
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
         TargetPlatform.android: FadePageTransitionsBuilder(),

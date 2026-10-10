@@ -8,8 +8,8 @@ import '../utils/category_icons.dart';
 import 'catalog_detail_page.dart';
 import 'user_spec_form_page.dart';
 
-/// 硬件库：顶部关键词搜索；按品类分 Tab，左右滑动切换；首个 Tab 是「我的添加」。
-/// 预置型号在各品类内按品牌分组展示（主流品牌 + 其它）。
+/// 硬件库：顶部关键词搜索；按品类分 Tab，左右滑动切换；首个 Tab 是「我的添加」
+/// 预置型号在各品类内按品牌分组展示（主流品牌 + 其它）
 class CatalogPage extends StatefulWidget {
   const CatalogPage({super.key});
 
@@ -24,10 +24,10 @@ class _CatalogPageState extends State<CatalogPage>
   List<HardwareSpec> _userSpecs = [];
   String _query = '';
 
-  // 预置库的品类顺序（即各 Tab 的顺序）。
+  // 预置库的品类顺序（即各 Tab 的顺序）
   static const _categories = ['CPU', '显卡', '主板', '内存', '硬盘', '电源', '机箱'];
 
-  // 搜索结果的品类展示顺序（含用户自定义可能用到的品类）。
+  // 搜索结果的品类展示顺序（含用户自定义可能用到的品类）
   static const _searchCategories = [
     'CPU',
     '显卡',
@@ -75,7 +75,7 @@ class _CatalogPageState extends State<CatalogPage>
       context,
       MaterialPageRoute(builder: (_) => CatalogDetailPage(spec: spec)),
     );
-    // 返回后刷新，可能增删了「我的添加」。
+    // 返回后刷新，可能增删了「我的添加」
     _load();
   }
 
@@ -122,7 +122,7 @@ class _CatalogPageState extends State<CatalogPage>
                     controller: _tabController,
                     isScrollable: true,
                     tabAlignment: TabAlignment.start,
-                    // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
+                    // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器
                     indicatorSize: TabBarIndicatorSize.tab,
                     indicatorPadding: const EdgeInsets.symmetric(
                       horizontal: 4,
@@ -180,7 +180,7 @@ class _CatalogPageState extends State<CatalogPage>
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
             filled: false,
-            // 去掉 isDense，用显式上下内边距让输入文字在玻璃框内垂直居中。
+            // 去掉 isDense，用显式上下内边距让输入文字在玻璃框内垂直居中
             contentPadding: const EdgeInsets.symmetric(vertical: 14),
           ),
         ),
@@ -272,7 +272,7 @@ class _CatalogPageState extends State<CatalogPage>
     );
   }
 
-  /// 「我的添加」按品牌堆叠：主流品牌在前（跨品类去重），其余归「其它」。
+  /// 「我的添加」按品牌堆叠：主流品牌在前（跨品类去重），其余归「其它」
   List<({String brand, List<HardwareSpec> specs})> _mineBrandSections() {
     final order = <String>[
       for (final mains in kBrandGroups.values) ...mains,
@@ -316,7 +316,7 @@ class _CatalogPageState extends State<CatalogPage>
     );
   }
 
-  /// 按品牌把某品类的型号分组：主流品牌在前（按 kBrandGroups 顺序），其余归「其它」。
+  /// 按品牌把某品类的型号分组：主流品牌在前（按 kBrandGroups 顺序），其余归「其它」
   List<({String brand, List<HardwareSpec> specs})> _brandSections(
     String category,
     List<HardwareSpec> specs,
@@ -359,7 +359,7 @@ class _CatalogPageState extends State<CatalogPage>
     );
   }
 
-  /// 单个型号行（不含卡片），用于放进品牌分组大卡片内。
+  /// 单个型号行（不含卡片），用于放进品牌分组大卡片内
   Widget _specTile(BuildContext context, HardwareSpec spec) {
     return ListTile(
       leading: CategoryBadge(category: spec.category),
@@ -370,7 +370,7 @@ class _CatalogPageState extends State<CatalogPage>
     );
   }
 
-  /// 搜索结果里的单个型号卡片（保持独立卡片样式）。
+  /// 搜索结果里的单个型号卡片（保持独立卡片样式）
   Widget _specCard(BuildContext context, HardwareSpec spec) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -378,7 +378,6 @@ class _CatalogPageState extends State<CatalogPage>
     );
   }
 
-  /// 品牌分组：一张大圆角卡片，顶部品牌名标题，下面该品牌所有型号分行。
   Widget _brandGroupCard(String brand, List<HardwareSpec> specs) {
     final theme = Theme.of(context);
     return Card(

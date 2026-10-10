@@ -1,21 +1,21 @@
 import '../models/hardware_spec.dart';
 
-/// 预置硬件库（参考数据）。
+/// 预置硬件库（参考数据）
 ///
-/// 注意：跑分为「约值」，随平台、驱动版本、测试环境不同会有差异，仅供参考。
-/// 后续可在此文件中增删型号，或直接改数值。
-/// 各品类的主流品牌（其余非主流品牌一律归入「其它」）。
+/// 注意：跑分为「约值」，随平台、驱动版本、测试环境不同会有差异，仅供参考
+/// 后续可在此文件中增删型号，或直接改数值
+/// 各品类的主流品牌（其余非主流品牌一律归入「其它」）
 const Map<String, List<String>> kBrandGroups = {
   'CPU': ['Intel', 'AMD'],
   '显卡': ['NVIDIA', 'AMD', 'Intel'],
   '主板': ['华硕', '微星', '技嘉'],
   '内存': ['金士顿', '芝奇', '海盗船', '金百达', '英睿达'],
   '硬盘': ['三星', '西数', '致态', '铠侠', '希捷', '东芝'],
-  '电源': ['海韵', '振华', '长城', '玄武', '鑫谷', '海盗船', '酷冷至尊', '安钛克'],
+  '电源': ['海韵', '振华', '长城', '玄武', '鑫谷', '海盗船', '酷冷至尊', '安钛克', '华硕'],
   '机箱': ['乔思伯', '先马', '九州风神', '联力', '恩杰', '海盗船', '追风者', '酷冷至尊'],
 };
 
-/// 返回某品类下某品牌所属的分类：主流品牌原样返回，其余归入「其它」。
+/// 返回某品类下某品牌所属的分类：主流品牌原样返回，其余归入「其它」
 String brandGroupOf(String category, String brand) {
   final mains = kBrandGroups[category] ?? const <String>[];
   final b = brand.trim().toLowerCase();
@@ -25,7 +25,7 @@ String brandGroupOf(String category, String brand) {
   return '其它';
 }
 
-/// 关键词搜索：型号 / 品牌 / 品类 / 参数 / 跑分里包含关键词即命中（不区分大小写）。
+/// 关键词搜索：型号 / 品牌 / 品类 / 参数 / 跑分里包含关键词即命中（不区分大小写）
 bool hardwareMatches(HardwareSpec spec, String query) {
   final q = query.trim().toLowerCase();
   if (q.isEmpty) return false;
@@ -3143,6 +3143,117 @@ const List<HardwareSpec> kHardwareCatalog = [
     model: '安钛克 NE650M 650W 金牌',
     specs: [
       SpecEntry('额定功率', '650W'),
+      SpecEntry('认证', '80Plus 金牌'),
+    ],
+    benchmarks: [],
+  ),
+  // ===== 高端高功率电源（1000W 及以上）=====
+  HardwareSpec(
+    id: 'psu_asus_thor_1200',
+    category: '电源',
+    brand: '华硕',
+    model: 'ROG THOR 1200W 铂金全模组',
+    specs: [
+      SpecEntry('额定功率', '1200W'),
+      SpecEntry('认证', '80Plus 铂金'),
+    ],
+    benchmarks: [],
+  ),
+  HardwareSpec(
+    id: 'psu_asus_thor_1000',
+    category: '电源',
+    brand: '华硕',
+    model: 'ROG THOR 1000W 铂金全模组',
+    specs: [
+      SpecEntry('额定功率', '1000W'),
+      SpecEntry('认证', '80Plus 铂金'),
+    ],
+    benchmarks: [],
+  ),
+  HardwareSpec(
+    id: 'psu_asus_strix_1200',
+    category: '电源',
+    brand: '华硕',
+    model: 'ROG STRIX 1200W 金牌全模组',
+    specs: [
+      SpecEntry('额定功率', '1200W'),
+      SpecEntry('认证', '80Plus 金牌'),
+    ],
+    benchmarks: [],
+  ),
+  HardwareSpec(
+    id: 'psu_asus_strix_1000',
+    category: '电源',
+    brand: '华硕',
+    model: 'ROG STRIX 1000W 金牌全模组',
+    specs: [
+      SpecEntry('额定功率', '1000W'),
+      SpecEntry('认证', '80Plus 金牌'),
+    ],
+    benchmarks: [],
+  ),
+  HardwareSpec(
+    id: 'psu_asus_thor_1600',
+    category: '电源',
+    brand: '华硕',
+    model: 'ROG THOR 1600W 钛金全模组',
+    specs: [
+      SpecEntry('额定功率', '1600W'),
+      SpecEntry('认证', '80Plus 钛金'),
+    ],
+    benchmarks: [],
+  ),
+  HardwareSpec(
+    id: 'psu_seasonic_prime_tx1300',
+    category: '电源',
+    brand: '海韵',
+    model: '海韵 PRIME TX-1300 钛金全模组',
+    specs: [
+      SpecEntry('额定功率', '1300W'),
+      SpecEntry('认证', '80Plus 钛金'),
+    ],
+    benchmarks: [],
+  ),
+  HardwareSpec(
+    id: 'psu_seasonic_prime_px1600',
+    category: '电源',
+    brand: '海韵',
+    model: '海韵 PRIME PX-1600 铂金全模组',
+    specs: [
+      SpecEntry('额定功率', '1600W'),
+      SpecEntry('认证', '80Plus 铂金'),
+    ],
+    benchmarks: [],
+  ),
+  HardwareSpec(
+    id: 'psu_corsair_ax1600i',
+    category: '电源',
+    brand: '海盗船',
+    model: '海盗船 AX1600i 钛金全模组',
+    specs: [
+      SpecEntry('额定功率', '1600W'),
+      SpecEntry('认证', '80Plus 钛金'),
+    ],
+    benchmarks: [],
+  ),
+  HardwareSpec(
+    id: 'psu_corsair_hx1200',
+    category: '电源',
+    brand: '海盗船',
+    model: '海盗船 HX1200 铂金全模组',
+    specs: [
+      SpecEntry('额定功率', '1200W'),
+      SpecEntry('认证', '80Plus 铂金'),
+    ],
+    benchmarks: [],
+  ),
+  HardwareSpec(
+    id: 'psu_superflower_leadex7_1300',
+    category: '电源',
+    brand: '振华',
+    model: '振华 LEADEX VII 1300W 金牌全模组',
+    specs: [
+      SpecEntry('额定功率', '1300W'),
       SpecEntry('认证', '80Plus 金牌'),
     ],
     benchmarks: [],

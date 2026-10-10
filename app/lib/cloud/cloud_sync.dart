@@ -5,26 +5,24 @@ import '../models/custom_item.dart';
 import 'auth_service.dart';
 import 'cloud_app.dart';
 
-/// 云端数据读写：整机方案的上传 / 拉取 / 删除（按用户隔离），以及头像上传到云存储。
+/// 云端数据读写：方案上传/拉取/删除（按用户隔离），以及头像上传
 class CloudSync {
   const CloudSync._();
 
-  /// 每个用户云端方案数量上限（防恶意占用）。
+  /// 每个用户云端方案数量上限（防恶意占用）
   static const int kMaxCloudPlans = 30;
 
-  /// 方案名最大长度。
   static const int kMaxPlanNameLen = 50;
 
-  /// 单个方案最大配件数（兜底校验，实际槽位约 7 个）。
+  /// 单个方案最大配件数（实际槽位约 7 个）
   static const int kMaxComponentsPerPlan = 16;
 
-  /// 每个用户云端自定义项目数量上限（防恶意占用）。
+  /// 每个用户云端自定义项目数量上限（防恶意占用）
   static const int kMaxCloudCustomItems = 30;
 
-  /// 自定义项目名称最大长度。
   static const int kMaxCustomNameLen = 50;
 
-  /// 取当前登录用户的稳定 ID；未登录抛错。
+  /// 取当前登录用户 uid；未登录抛错
   static String _requireUid() {
     final uid = AuthService.instance.uid;
     if (uid == null || uid.isEmpty) {
@@ -33,7 +31,7 @@ class CloudSync {
     return uid;
   }
 
-  /// 校验方案数据合法，拦下异常 / 超大 payload（防恶意刷数据）。
+  /// 校验方案数据合法，拦异常/超大 payload（防恶意刷数据）
   static void _validatePlan(BuildPlan plan) {
     if (plan.name.length > kMaxPlanNameLen) {
       throw Exception('方案名过长（最多 $kMaxPlanNameLen 字）');
@@ -46,8 +44,7 @@ class CloudSync {
     }
   }
 
-  /// 上传单个方案：用方案 id 当文档 id 幂等覆盖（重复上传不产生重复数据），
-  /// 并写入 `owner` 记录归属人，实现用户隔离。
+  /// 上传单个方案：按 id 幂等覆盖，写入 owner 做用户隔离
   static Future<void> uploadPlan(BuildPlan plan) async {
     final uid = _requireUid();
     _validatePlan(plan);
@@ -59,7 +56,7 @@ class CloudSync {
     }
   }
 
-  /// 从云拉取当前用户自己的所有方案（按 owner 过滤，避免串号/隐私泄露）。
+  /// 拉取当前用户自己的方案（按 owner 过滤，避免串号）
   static Future<List<BuildPlan>> downloadPlans() async {
     final uid = _requireUid();
     final db = CloudApp.app.database();
@@ -74,8 +71,7 @@ class CloudSync {
     return res.data.map((e) => BuildPlan.fromJson(e)).toList();
   }
 
-  /// 统计当前用户云端方案数（上传前判上限）。
-  /// 统计失败时返回一个足够大的数，让上限检查直接跳过、不阻塞上传。
+  /// 统计云端方案数（上传前判上限）；失败返回大数让上限检查跳过
   static Future<int> countPlans() async {
     final uid = _requireUid();
     final db = CloudApp.app.database();
@@ -84,17 +80,20 @@ class CloudSync {
     return res.total;
   }
 
-  /// 删除云端某个方案（本地删除时同步调用）。
+  /// 删除云端方案：只删自己名下的（owner + id 过滤，防删到别人的数据）
   static Future<void> deletePlan(String planId) async {
-    _requireUid();
+    final uid = _requireUid();
     final db = CloudApp.app.database();
-    final res = await db.collection('plans').doc(planId).remove();
+    final res = await db
+        .collection('plans')
+        .where({'owner': uid, 'id': planId})
+        .remove();
     if (!res.isSuccess) {
       throw Exception('云端删除失败：${res.message ?? res.code}');
     }
   }
 
-  /// 校验自定义项目数据合法（拦下异常 / 超大 payload）。
+  /// 校验自定义项目数据合法
   static void _validateCustomItem(CustomItem item) {
     if (item.name.length > kMaxCustomNameLen) {
       throw Exception('项目名过长（最多 $kMaxCustomNameLen 字）');
@@ -104,7 +103,7 @@ class CloudSync {
     }
   }
 
-  /// 上传单个自定义项目（按 id 幂等覆盖，写入 owner 做用户隔离）。
+  /// 上传单个自定义项目（按 id 幂等覆盖，写入 owner）
   static Future<void> uploadCustomItem(CustomItem item) async {
     final uid = _requireUid();
     _validateCustomItem(item);
@@ -116,7 +115,7 @@ class CloudSync {
     }
   }
 
-  /// 从云拉取当前用户自己的所有自定义项目。
+  /// 拉取当前用户自己的自定义项目
   static Future<List<CustomItem>> downloadCustomItems() async {
     final uid = _requireUid();
     final db = CloudApp.app.database();
@@ -131,7 +130,7 @@ class CloudSync {
     return res.data.map((e) => CustomItem.fromJson(e)).toList();
   }
 
-  /// 统计当前用户云端自定义项目数（上传前判上限）。
+  /// 统计云端自定义项目数（上传前判上限）
   static Future<int> countCustomItems() async {
     final uid = _requireUid();
     final db = CloudApp.app.database();
@@ -141,19 +140,20 @@ class CloudSync {
     return res.total;
   }
 
-  /// 删除云端某个自定义项目（本地删除时同步调用）。
+  /// 删除云端自定义项目：只删自己名下的（owner + id 过滤，防删到别人的数据）
   static Future<void> deleteCustomItem(String itemId) async {
-    _requireUid();
+    final uid = _requireUid();
     final db = CloudApp.app.database();
-    final res = await db.collection('custom_items').doc(itemId).remove();
+    final res = await db
+        .collection('custom_items')
+        .where({'owner': uid, 'id': itemId})
+        .remove();
     if (!res.isSuccess) {
       throw Exception('云端删除失败：${res.message ?? res.code}');
     }
   }
 
-  /// 上传头像图片到云存储，并把 fileId 存进账号资料。
-  ///
-  /// [bytes] 为图片文件字节，[ext] 为扩展名（jpg / png）。
+  /// 上传头像到云存储，并把 fileId 存进账号资料
   static Future<void> uploadAvatar(List<int> bytes, String ext) async {
     final storage = CloudApp.app.storage.from();
     final name = '${AuthService.instance.username ?? 'user'}'
@@ -167,13 +167,13 @@ class CloudSync {
     if (fileId == null || fileId.isEmpty) {
       throw Exception('头像上传失败：${up.error?.message ?? '未知错误'}');
     }
-    // 把文件 ID 存到账号资料（头像的稳定引用，展示时再换临时下载链接）。
+    // 把 fileId 存进账号资料（头像的稳定引用）
     await CloudApp.app.auth.updateUser(UpdateUserReq(avatarUrl: fileId));
-    // 上传后刷新本地缓存的用户资料。
+    // 上传后刷新本地缓存的用户资料
     await AuthService.instance.refreshUser();
   }
 
-  /// 用账号里存的 fileId 换一个临时下载链接（头像展示用）。
+  /// 用账号里的 fileId 换临时下载链接
   static Future<String?> avatarDownloadUrl() async {
     final fileId = AuthService.instance.avatarUrl;
     if (fileId == null || !fileId.startsWith('cloud://')) return null;

@@ -7,14 +7,14 @@ import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
 import 'hardware_form_page.dart';
 
-/// 硬件清单主页：展示已录入的硬件，可新增、删除，也可进入硬件库选型号。
+/// 硬件清单主页：展示已录入的硬件，可新增、删除，也可进入硬件库选型号
 class HardwareListPage extends StatefulWidget {
   const HardwareListPage({super.key, this.onOpenPlan, this.isActive = true});
 
-  /// 点击整机方案条目时回调，用于切换到顶部「整机方案」分段。
+  /// 点击整机方案条目时回调，用于切换到顶部「整机方案」分段
   final VoidCallback? onOpenPlan;
 
-  /// 当前是否为底部导航选中的标签页；从其他页切回来时用于刷新数据。
+  /// 当前是否为底部导航选中的标签页；从其他页切回来时用于刷新数据
   final bool isActive;
 
   @override
@@ -27,7 +27,7 @@ class _HardwareListPageState extends State<HardwareListPage>
   List<HardwareItem> _items = [];
   bool _loading = true;
 
-  // 清单分类 Tab 的顺序（可左右滑动切换）。
+  // 清单分类 Tab 的顺序（可左右滑动切换）
   static const _categories = [
     '整机方案',
     'CPU',
@@ -63,7 +63,7 @@ class _HardwareListPageState extends State<HardwareListPage>
   @override
   void didUpdateWidget(covariant HardwareListPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 从其他标签页切回来时重新加载，确保能看到在整机方案页里保存的条目。
+    // 从其他标签页切回来时重新加载，确保能看到在整机方案页里保存的条目
     if (widget.isActive && !oldWidget.isActive) _load();
   }
 
@@ -129,7 +129,7 @@ class _HardwareListPageState extends State<HardwareListPage>
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : NestedScrollView(
-              // 上滑时标题 + 分类标签随内容一起滚走（淡出），不再悬浮分割观感。
+              // 上滑时标题 + 分类标签随内容一起滚走（淡出），不再悬浮分割观感
               headerSliverBuilder: (context, innerBoxIsScrolled) => [
                 SliverAppBar(
                   pinned: false,
@@ -147,12 +147,12 @@ class _HardwareListPageState extends State<HardwareListPage>
                     preferredSize: const Size.fromHeight(kTextTabBarHeight + 8),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                      // 分类标签：透明底色，仅保留选中胶囊高亮。
+                      // 分类标签：透明底色，仅保留选中胶囊高亮
                       child: TabBar(
                         controller: _tabController,
                         isScrollable: true,
                         tabAlignment: TabAlignment.start,
-                        // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器。
+                        // 选中分类用圆角胶囊高亮，避免默认的直角矩形指示器
                         indicatorSize: TabBarIndicatorSize.tab,
                         indicatorPadding: const EdgeInsets.symmetric(
                           horizontal: 4,
@@ -176,15 +176,15 @@ class _HardwareListPageState extends State<HardwareListPage>
                 children: [for (final c in _categories) _categoryTab(c)],
               ),
             ),
-      // 「整机方案」由整机方案页生成，不能手动添加，故隐藏右下角 +。
+      // 「整机方案」由整机方案页生成，不能手动添加，故隐藏右下角 +
       floatingActionButton: currentCategory == '整机方案'
           ? null
           : Padding(
-              // 底部导航悬浮在内容上方，FAB 也要上移导航高度，避免被导航遮住。
+              // 底部导航悬浮在内容上方，FAB 也要上移导航高度，避免被导航遮住
               padding: EdgeInsets.only(bottom: kNavOverlaySpace),
               child: FloatingActionButton(
                 shape: const CircleBorder(),
-                // 半透明材质，和保存按钮 / 玻璃风格一致。
+                // 半透明材质，和保存按钮 / 玻璃风格一致
                 backgroundColor: scheme.primary.withValues(alpha: 0.16),
                 foregroundColor: scheme.primary,
                 onPressed: () => _openForm(currentCategory),
@@ -199,7 +199,7 @@ class _HardwareListPageState extends State<HardwareListPage>
     final items = _items.where((e) => e.category == category).toList();
     if (items.isEmpty) return _emptyCategory(category);
     return ListView.builder(
-      // 回弹效果：超出可滚动范围时橡皮筋回弹（AlwaysScrollable 保证短列表也能滚）。
+      // 回弹效果：超出可滚动范围时橡皮筋回弹（AlwaysScrollable 保证短列表也能滚）
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),
@@ -240,7 +240,7 @@ class _HardwareListPageState extends State<HardwareListPage>
         ),
       ],
     );
-    // 空状态也做成可滚动，让标题栏能随上滑淡出、并带橡皮筋回弹。
+    // 空状态也做成可滚动，让标题栏能随上滑淡出、并带橡皮筋回弹
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         physics: const BouncingScrollPhysics(
@@ -270,7 +270,7 @@ class _HardwareCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isPlan = item.planId != null;
-    // 整机方案只展示方案名称，隐藏 CPU/显卡 等配件摘要。
+    // 整机方案只展示方案名称，隐藏 CPU/显卡 等配件摘要
     final subtitle = [
       if (item.brand.isNotEmpty) item.brand,
       if (item.platform.isNotEmpty) item.platform,
@@ -295,7 +295,7 @@ class _HardwareCard extends StatelessWidget {
                     Text(
                       item.model,
                       style: TextStyle(
-                        // 整机方案：方案名加粗加大；普通硬件保持原样。
+                        // 整机方案：方案名加粗加大；普通硬件保持原样
                         fontWeight: isPlan ? FontWeight.w700 : FontWeight.w600,
                         fontSize: isPlan ? 19 : 16,
                       ),

@@ -5,7 +5,7 @@ import '../theme/app_theme.dart';
 
 const _categories = ['游戏', '工程项目', '其它'];
 
-/// 新建 / 编辑「自定义项目」：选类别、填名称（游戏额外填画质描述）。
+/// 新建 / 编辑「自定义项目」：选类别、填名称（游戏额外填画质描述）
 class CustomItemFormPage extends StatefulWidget {
   const CustomItemFormPage({super.key, this.initial});
 
@@ -107,7 +107,7 @@ class _CustomItemFormPageState extends State<CustomItemFormPage> {
             const SizedBox(height: 32),
             FilledButton(
               onPressed: _save,
-              // 与「保存到我的添加」等主按钮统一：胶囊圆角 + 半透明材质。
+              // 与「保存到我的添加」等主按钮统一：胶囊圆角 + 半透明材质
               style: capsuleButtonStyle(Theme.of(context)),
               child: const Text('保存'),
             ),

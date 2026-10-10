@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_bottom_navbar_plus/liquid_glass_bottom_navbar_plus.dart';
 
 import '../data/hardware_catalog.dart';
 import '../models/build_plan.dart';
@@ -9,8 +10,8 @@ import '../storage/user_spec_store.dart';
 import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
 
-/// 为整机方案某个槽位选择配件：可从硬件库选、从清单里选，或手动填价格。
-/// 返回 `(是否清空, 配件)`；null 表示取消（不改动）。
+/// 为某个槽位选配件：从硬件库、清单，或手动填价格
+/// 返回 (是否清空, 配件)；null 表示取消
 class ComponentPickerPage extends StatefulWidget {
   const ComponentPickerPage({
     super.key,
@@ -55,7 +56,7 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
 
   bool get _searching => _query.trim().isNotEmpty;
 
-  /// 清单条目（HardwareItem）的关键词匹配：型号 / 品牌 / 平台 / 备注。
+  /// 清单条目关键词匹配（型号/品牌/平台/备注）
   bool _itemMatches(HardwareItem item, String query) {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return false;
@@ -80,7 +81,7 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
     if (!mounted) return;
     setState(() {
       _items = allItems.where((e) => e.category == widget.category).toList();
-      // 硬件库：先放预置型号，再并入「我的添加」（按 id 去重）。
+      // 硬件库：先放预置型号，再并入「我的添加」（按 id 去重）
       _library = [];
       for (final s in kHardwareCatalog) {
         if (s.category == widget.category) _library.add(s);
@@ -111,7 +112,7 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
   }
 
   void _pickSpec(HardwareSpec spec) {
-    // 不再弹二级页填价格：价格留空（0），回到方案详情页在该行内联填写。
+    // 价格留空（0），回方案详情页在该行内联填写
     final comp = PlanComponent(
       category: spec.category,
       brand: spec.brand,
@@ -156,6 +157,8 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
+      // 列表内容延伸到按钮下方，按钮悬浮在内容之上（与底部导航一致）
+      extendBody: true,
       appBar: AppBar(
         title: Text('选择${widget.slotLabel}'),
         actions: [
@@ -172,15 +175,43 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
           Expanded(child: _searching ? _searchList(theme) : _allList(theme)),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: FilledButton.icon(
-            onPressed: _manual,
-            icon: const Icon(Icons.edit),
-            label: const Text('手动填写型号和价格'),
-            // 与全站主按钮统一：胶囊圆角 + 半透明玻璃底色。
-            style: capsuleButtonStyle(theme),
+      bottomNavigationBar: _floatingManualButton(theme),
+    );
+  }
+
+  /// 底部悬浮的「手动填写」按钮：液态玻璃材质，与底部导航同一套玻璃
+  Widget _floatingManualButton(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: FakeGlass(
+          borderRadius: BorderRadius.circular(kNavBarRadius),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(kNavBarRadius),
+              onTap: _manual,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.edit, size: 20, color: scheme.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      '手动填写型号和价格',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -190,7 +221,7 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
   Widget _searchBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      // 与硬件库搜索框统一：玻璃半透明底 + 胶囊圆角。
+      // 与硬件库搜索框统一：玻璃半透明底 + 胶囊圆角
       child: GlassField(
         child: TextField(
           controller: _searchController,
@@ -216,7 +247,8 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
 
   Widget _allList(ThemeData theme) {
     return ListView(
-      padding: const EdgeInsets.all(12),
+      // 底部留出悬浮按钮高度，避免最后一项被挡住
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       children: [
         _sectionTitle(theme, '从硬件库选'),
         if (_library.isEmpty)
@@ -235,7 +267,7 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
     );
   }
 
-  /// 硬件库型号按品牌分组（主流品牌在前，其余归「其它」），与硬件库页一致。
+  /// 硬件库型号按品牌分组（主流品牌在前，其余归「其它」）
   List<({String brand, List<HardwareSpec> specs})> _specBrandSections(
     List<HardwareSpec> specs,
   ) {
@@ -252,7 +284,6 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
     return sections;
   }
 
-  /// 我的清单条目按品牌分组（与硬件库一致）。
   List<({String brand, List<HardwareItem> items})> _itemBrandSections(
     List<HardwareItem> items,
   ) {
@@ -269,7 +300,7 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
     return sections;
   }
 
-  /// 品牌分组大圆角卡片（硬件库型号）：顶部品牌名，下面每型号一行。
+  /// 品牌分组大圆角卡片（硬件库型号）
   Widget _specBrandCard(ThemeData theme, String brand, List<HardwareSpec> specs) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -302,7 +333,7 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
     );
   }
 
-  /// 品牌分组大圆角卡片（我的清单条目）：顶部品牌名，下面每条目一行（带价格）。
+  /// 品牌分组大圆角卡片（我的清单条目）
   Widget _itemBrandCard(ThemeData theme, String brand, List<HardwareItem> items) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -361,7 +392,8 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
       );
     }
     return ListView(
-      padding: const EdgeInsets.all(12),
+      // 底部留出悬浮按钮高度，避免最后一项被挡住
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavClearance(context)),
       children: [
         if (lib.isNotEmpty) ...[
           _sectionTitle(theme, '硬件库'),
@@ -430,7 +462,7 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
   }
 }
 
-/// 手动填写 / 填价弹窗里的输入框：与全站统一为胶囊圆角 + 半透明底色。
+/// 弹窗输入框：与全站统一为胶囊圆角 + 半透明底色
 InputDecoration _glassFieldDeco(BuildContext context, String label) {
   final scheme = Theme.of(context).colorScheme;
   OutlineInputBorder border(Color c) => OutlineInputBorder(
@@ -447,7 +479,7 @@ InputDecoration _glassFieldDeco(BuildContext context, String label) {
   );
 }
 
-/// 手动填写型号 + 品牌 + 价格，返回 (价格, 型号, 品牌)。
+/// 手动填写型号 + 品牌 + 价格，返回 (价格, 型号, 品牌)
 class _ManualEntryDialog extends StatefulWidget {
   const _ManualEntryDialog({required this.slotLabel});
 

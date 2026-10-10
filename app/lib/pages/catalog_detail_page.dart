@@ -9,7 +9,7 @@ import '../utils/category_icons.dart';
 
 const _platforms = ['京东', '淘宝', '拼多多', '天猫', '其他'];
 
-/// 硬件型号详情：参数规格 + 跑分，可加入我的清单。
+/// 硬件型号详情：参数规格 + 跑分，可加入我的清单
 class CatalogDetailPage extends StatefulWidget {
   const CatalogDetailPage({super.key, required this.spec});
 
@@ -178,7 +178,7 @@ class _CatalogDetailPageState extends State<CatalogDetailPage> {
   }
 }
 
-/// 加入清单时填写价格和平台的对话框。
+/// 加入清单时填写价格和平台的对话框
 class _AddPriceDialog extends StatefulWidget {
   const _AddPriceDialog({required this.spec});
 

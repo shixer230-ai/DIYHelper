@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../cloud/auth_service.dart';
 import '../theme/app_theme.dart';
 
-/// 登录 / 注册页：登录用「用户名/邮箱 + 密码」；注册用「邮箱 + 用户名 + 密码 + 验证码」。
+/// 登录/注册页：登录用用户名/邮箱+密码，注册用邮箱+用户名+密码+验证码
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
 
@@ -44,7 +44,7 @@ class _AccountPageState extends State<AccountPage> {
     try {
       if (_isRegister) {
         if (!_codeSent) {
-          // 第一步：发验证码到邮箱。
+          // 第一步：发验证码到邮箱
           await AuthService.instance.sendSignUpCode(
             email: _emailCtrl.text.trim(),
             password: _passwordCtrl.text.trim(),
@@ -53,7 +53,7 @@ class _AccountPageState extends State<AccountPage> {
           setState(() => _codeSent = true);
           _snack('验证码已发送到邮箱，请查收');
         } else {
-          // 第二步：填验证码完成注册。
+          // 第二步：填验证码完成注册
           await AuthService.instance.confirmSignUp(_codeCtrl.text.trim());
           if (mounted) Navigator.pop(context);
         }
@@ -89,7 +89,7 @@ class _AccountPageState extends State<AccountPage> {
   String? _validateUsername(String? v) {
     final t = v?.trim() ?? '';
     if (t.isEmpty) return '请输入用户名';
-    // 与云端规则一致：小写字母开头，6~25 位，仅限小写字母/数字/下划线/连字符。
+    // 与云端规则一致：小写字母开头，6~25 位，仅限小写字母/数字/下划线/连字符
     return RegExp(r'^[a-z][0-9a-z_-]{5,24}$').hasMatch(t)
         ? null
         : '小写字母开头，6~25 位，仅限小写字母/数字/下划线/连字符';

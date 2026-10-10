@@ -19,7 +19,7 @@ import '../utils/category_icons.dart';
 import 'account_page.dart';
 import 'build_plan_page.dart' show kBuildSlots;
 
-/// 「我的」页：个人信息 + 自定义背景 + 主题色 + 外观（深浅色）+ 关于。
+/// 「我的」页：个人信息 + 自定义背景 + 主题色 + 外观（深浅色）+ 关于
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
@@ -45,7 +45,7 @@ class ProfilePage extends StatelessWidget {
     final path = await AvatarImageStore.saveImage(file);
     if (!context.mounted) return;
     await ThemeController.instance.setAvatar(path);
-    // 已登录则自动把新头像上传到云（尽力而为，不打断本地流程）。
+    // 已登录则自动把新头像上传到云（尽力而为，不打断本地流程）
     if (!context.mounted) return;
     if (AuthService.instance.isLoggedIn) _uploadAvatar(context);
   }
@@ -114,7 +114,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  /// 顶部卡片：头像 + 昵称 + 账号与云同步（登录/注册、上传头像、退出登录）合并为一块。
+  /// 顶部卡片：头像 + 昵称 + 账号与云同步（登录/注册、上传头像、退出登录）合并为一块
   Widget _accountCard(BuildContext context, ThemeData theme) {
     final nickname = ThemeController.instance.nickname;
     final avatarPath = ThemeController.instance.avatarPath;
@@ -199,7 +199,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  /// 把本地头像图片上传到云存储并存入账号资料。
+  /// 把本地头像图片上传到云存储并存入账号资料
   Future<void> _uploadAvatar(BuildContext context) async {
     final path = ThemeController.instance.avatarPath;
     if (path == null) {
@@ -222,7 +222,7 @@ class ProfilePage extends StatelessWidget {
     }
   }
 
-  /// 头像：有自定义图片则显示图片，否则显示默认人形图标；点击更换，右下角相机小标提示。
+  /// 头像：有自定义图片则显示图片，否则显示默认人形图标；点击更换，右下角相机小标提示
   Widget _avatar(ThemeData theme, BuildContext context, String? path) {
     return InkWell(
       customBorder: const CircleBorder(),
@@ -414,7 +414,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  /// 一键导出配置单：列出所有整机方案，选一个后用系统分享面板分享。
+  /// 一键导出配置单：列出所有整机方案，选一个后用系统分享面板分享
   Future<void> _exportConfig(BuildContext context) async {
     final plans = await BuildPlanStore().loadAll();
     if (!context.mounted) return;
@@ -434,15 +434,14 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  /// 一键导入配置单：读取剪贴板里的配置单文本（可手动粘贴修改），
-  /// 解析后还原成一个新的整机方案，与「导出配置单」的格式保持一致。
+  /// 一键导入配置单：读取剪贴板文本（可手动粘贴修改），解析后还原成新方案
   Future<void> _importConfig(BuildContext context) async {
     String initial = '';
     try {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       initial = data?.text ?? '';
     } catch (_) {
-      // 剪贴板读取失败就留空，让用户手动粘贴。
+      // 剪贴板读取失败就留空，让用户手动粘贴
     }
     if (!context.mounted) return;
     final text = await showDialog<String>(
@@ -459,7 +458,7 @@ class ProfilePage extends StatelessWidget {
     }
     final store = BuildPlanStore();
     final plans = await store.loadAll();
-    // 与已有方案重名时追加序号，避免列表里混淆。
+    // 与已有方案重名时追加序号，避免列表里混淆
     var name = parsed.name;
     var n = 2;
     while (plans.any((p) => p.name == name)) {
@@ -510,7 +509,7 @@ class ProfilePage extends StatelessWidget {
   }
 
   void _showVersionLog(BuildContext context) {
-    // 不再用弹窗，直接进入一个整页展示，阅读更舒服。
+    // 不再用弹窗，直接进入一个整页展示，阅读更舒服
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const _VersionLogPage()),
@@ -552,7 +551,7 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-/// 版本更新日志整页：按版本分组展示，最新在前。
+/// 版本更新日志整页：按版本分组展示，最新在前
 class _VersionLogPage extends StatelessWidget {
   const _VersionLogPage();
 
@@ -592,7 +591,7 @@ class _VersionLogPage extends StatelessWidget {
   }
 }
 
-/// 修改昵称的对话框，返回非空昵称。
+/// 修改昵称的对话框，返回非空昵称
 class _NicknameDialog extends StatefulWidget {
   const _NicknameDialog({required this.initial});
 
@@ -645,7 +644,7 @@ class _NicknameDialogState extends State<_NicknameDialog> {
   }
 }
 
-/// 选择要导出的方案。
+/// 选择要导出的方案
 class _ExportSheet extends StatelessWidget {
   const _ExportSheet({required this.plans});
 
@@ -697,7 +696,7 @@ String _planName(BuildPlan plan) => plan.name.isEmpty ? '未命名方案' : plan
 String _fmt(double p) =>
     p == p.roundToDouble() ? p.toStringAsFixed(0) : p.toStringAsFixed(2);
 
-/// 把单个整机方案排版成纯文本配置单。
+/// 把单个整机方案排版成纯文本配置单
 String configText(BuildPlan plan) {
   final buf = StringBuffer();
   buf.writeln('【DIYHelper 配置单】${_planName(plan)}');
@@ -714,8 +713,8 @@ String configText(BuildPlan plan) {
   return buf.toString();
 }
 
-/// 解析「导出配置单」生成的文本，还原成整机方案；识别不到任何配件时返回 null。
-/// 格式与 [configText] 保持一致：方案名从头部读取，配件行按槽位标签 + 型号 + 品牌 + 价格解析。
+/// 解析「导出配置单」生成的文本，还原成整机方案；识别不到任何配件时返回 null
+/// 格式与 [configText] 一致：方案名从头部读取，配件行按槽位标签+型号+品牌+价格解析
 BuildPlan? parseConfig(String text) {
   final lines = text.split('\n').map((e) => e.trim()).toList();
 
@@ -765,7 +764,7 @@ BuildPlan? parseConfig(String text) {
   return BuildPlan(name: name, components: components);
 }
 
-/// 粘贴配置单文本的对话框；打开时自动填充剪贴板内容。
+/// 粘贴配置单文本的对话框；打开时自动填充剪贴板内容
 class _ImportDialog extends StatefulWidget {
   const _ImportDialog({required this.initialText});
 

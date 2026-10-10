@@ -16,11 +16,11 @@ import '../theme/app_theme.dart';
 import 'ai_analysis_page.dart';
 import 'custom_item_form_page.dart';
 
-/// 分析页：按所选「性价比项目」（内置跑分/功耗 + 自定义项目）给整机方案排行。
+/// 分析页：按所选「性价比项目」（内置跑分/功耗 + 自定义项目）给整机方案排行
 class AnalysisPage extends StatefulWidget {
   const AnalysisPage({super.key, this.isActive = true});
 
-  /// 当前是否为底部导航选中的标签页；切回来时用于刷新方案数据。
+  /// 当前是否为底部导航选中的标签页；切回来时用于刷新方案数据
   final bool isActive;
 
   @override
@@ -56,7 +56,7 @@ class _AnalysisPageState extends State<AnalysisPage>
   @override
   void didUpdateWidget(covariant AnalysisPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 从其他标签页切回来时刷新方案/配件数据，避免排行滞后。
+    // 从其他标签页切回来时刷新方案/配件数据，避免排行滞后
     if (widget.isActive && !oldWidget.isActive) _load();
   }
 
@@ -76,7 +76,7 @@ class _AnalysisPageState extends State<AnalysisPage>
       _loading = false;
     });
 
-    // 已登录时自动从云同步（替代原先手动点「从云恢复」按钮）。
+    // 已登录时自动从云同步（替代原先手动点「从云恢复」按钮）
     if (AuthService.instance.isLoggedIn) {
       _restoreFromCloud(silent: true);
     }
@@ -97,10 +97,8 @@ class _AnalysisPageState extends State<AnalysisPage>
 
   bool get _isCustom => _custom != null;
 
-  /// 是否为「整机功耗」这类数值越小越好的整机指标。
+  /// 是否为「整机功耗」这类数值越小越好的整机指标
   bool get _isPower => _builtin.category == '整机';
-
-  // ---- 选择器 ----
 
   List<_Choice> get _choices => [
     for (final item in kValueItems) _Choice.builtin(item),
@@ -173,18 +171,18 @@ class _AnalysisPageState extends State<AnalysisPage>
     if (_customId == item.id) _customId = null;
     await _reloadCustoms();
 
-    // 记墓碑 + 尽力删云端（离线/失败稍后自动补删）。
+    // 记墓碑 + 尽力删云端（离线/失败稍后自动补删）
     _pendingDeletes.add(item.id);
     await _customStore.savePendingDeleteIds(_pendingDeletes);
     if (!AuthService.instance.isLoggedIn) return;
     try {
       await CloudSync.deleteCustomItem(item.id);
     } catch (_) {
-      // 删不掉就留着墓碑，下次恢复时过滤掉。
+      // 删不掉就留着墓碑，下次恢复时过滤掉
     }
   }
 
-  /// 新建/编辑后尽力上传到云（不阻断本地流程）。
+  /// 新建/编辑后尽力上传到云（不阻断本地流程）
   Future<void> _uploadCustom(CustomItem item) async {
     if (!AuthService.instance.isLoggedIn) return;
     try {
@@ -194,8 +192,8 @@ class _AnalysisPageState extends State<AnalysisPage>
     }
   }
 
-  /// 从云拉取数据：先恢复整机方案（分析排行要用），再恢复自定义项目（分数按方案 id 关联）。
-  /// 两边都按 id 去重并入本地，墓碑里的条目会被过滤。
+  /// 从云拉取数据：先恢复整机方案（分析排行要用），再恢复自定义项目（分数按方案 id 关联）
+  /// 两边都按 id 去重并入本地，墓碑里的条目会被过滤
   Future<void> _restoreFromCloud({bool silent = false}) async {
     if (!AuthService.instance.isLoggedIn) {
       if (!silent) _snack('请先在「我的」页登录');
@@ -204,7 +202,7 @@ class _AnalysisPageState extends State<AnalysisPage>
     if (_syncing) return;
     setState(() => _syncing = true);
     try {
-      // 1) 恢复整机方案。
+      // 1) 恢复整机方案
       for (final id in _planPendingDeletes.toList()) {
         try {
           await CloudSync.deletePlan(id);
@@ -222,7 +220,7 @@ class _AnalysisPageState extends State<AnalysisPage>
           .where((p) => !existingPlanIds.contains(p.id))
           .toList();
 
-      // 2) 恢复自定义项目。
+      // 2) 恢复自定义项目
       for (final id in _pendingDeletes.toList()) {
         try {
           await CloudSync.deleteCustomItem(id);
@@ -244,7 +242,7 @@ class _AnalysisPageState extends State<AnalysisPage>
         }
       }
 
-      // 落盘并刷新界面（_reloadCustoms 的 setState 会一并带上新的 _plans）。
+      // 落盘并刷新界面（_reloadCustoms 的 setState 会一并带上新的 _plans）
       if (freshPlans.isNotEmpty) {
         _plans = [..._plans, ...freshPlans];
         await _planStore.saveAll(_plans);
@@ -270,8 +268,8 @@ class _AnalysisPageState extends State<AnalysisPage>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  /// 打开 AI 分析（需登录；分析用户选中的某个方案）。
-  /// API Key 在云函数里，这里不再解析 key，直接进分析页由云函数代调用。
+  /// 打开 AI 分析（需登录；分析用户选中的某个方案）
+  /// API Key 在云函数里，这里不再解析 key，直接进分析页由云函数代调用
   void _openAiAnalysis(BuildPlan plan, {required String mode}) {
     if (!AuthService.instance.isLoggedIn) {
       _snack('AI 分析需要登录，请先在「我的」页注册/登录');
@@ -292,8 +290,6 @@ class _AnalysisPageState extends State<AnalysisPage>
     );
   }
 
-  // ---- 分数 ----
-
   Future<void> _saveScore(CustomItem item, String planId, double? value) async {
     item.setScore(planId, value);
     setState(() {});
@@ -309,9 +305,9 @@ class _AnalysisPageState extends State<AnalysisPage>
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
               bottom: false,
-              // 与「清单」页顶部一致的固定布局：液态玻璃分段放在非滚动区域。
+              // 与「清单」页顶部一致的固定布局：液态玻璃分段放在非滚动区域
               // 之前放进 NestedScrollView 里，滑动时 BackdropFilter 采样区域跟着
-              // 移动导致渲染出错；改成固定 Column 后分段不再随内容滚动，恢复正常。
+              // 移动导致渲染出错；改成固定 Column 后分段不再随内容滚动，恢复正常
               child: Column(
                 children: [
                   _glassSegmented(theme),
@@ -328,7 +324,7 @@ class _AnalysisPageState extends State<AnalysisPage>
     );
   }
 
-  /// 顶部液态玻璃分段（与「清单」顶部分段一致）：性价比排行 / AI 分析 / 可靠性分析。
+  /// 顶部液态玻璃分段（与「清单」顶部分段一致）：性价比排行 / AI 分析 / 可靠性分析
   Widget _glassSegmented(ThemeData theme) {
     final scheme = theme.colorScheme;
     return Padding(
@@ -359,7 +355,7 @@ class _AnalysisPageState extends State<AnalysisPage>
     );
   }
 
-  /// AI 分析模式：列出所有方案，用户点一个进入常规分析。
+  /// AI 分析模式：列出所有方案，用户点一个进入常规分析
   Widget _aiView(ThemeData theme) => _planPicker(
         theme,
         mode: 'general',
@@ -367,7 +363,7 @@ class _AnalysisPageState extends State<AnalysisPage>
         hint: '选择一个方案，AI 会分析它的亮点、侧重、局限与超频稳定性',
       );
 
-  /// 可靠性分析模式：列出所有方案，用户点一个进入可靠性分析。
+  /// 可靠性分析模式：列出所有方案，用户点一个进入可靠性分析
   Widget _reliabilityView(ThemeData theme) => _planPicker(
         theme,
         mode: 'reliability',
@@ -375,7 +371,7 @@ class _AnalysisPageState extends State<AnalysisPage>
         hint: '选择一个方案，AI 会检测功耗稳定性、魔改 CPU / 矿卡等硬件风险',
       );
 
-  /// 方案选择列表（AI 分析 / 可靠性分析共用）：一行一个方案，点按进入对应分析。
+  /// 方案选择列表（AI 分析 / 可靠性分析共用）：一行一个方案，点按进入对应分析
   Widget _planPicker(
     ThemeData theme, {
     required String mode,
@@ -406,7 +402,7 @@ class _AnalysisPageState extends State<AnalysisPage>
     );
   }
 
-  /// 方案选择卡片：方案名 + 配件数 + 总价，点按进入分析。
+  /// 方案选择卡片：方案名 + 配件数 + 总价，点按进入分析
   Widget _planCard(ThemeData theme, BuildPlan plan, String mode, IconData icon) {
     final name = plan.name.isEmpty ? '未命名方案' : plan.name;
     final count = plan.components.length;
@@ -520,7 +516,7 @@ class _AnalysisPageState extends State<AnalysisPage>
     final custom = _custom!;
     if (_plans.isEmpty) return _empty(theme);
 
-    // 性价比指数 = 分数 ÷ 整机总价 × 1000，越大越好；总价为 0 的排在最后。
+    // 性价比指数 = 分数 ÷ 整机总价 × 1000，越大越好；总价为 0 的排在最后
     double indexOf(BuildPlan p) {
       final s = custom.scoreOf(p.id);
       if (s == null || p.total <= 0) return double.negativeInfinity;
@@ -593,8 +589,8 @@ class _AnalysisPageState extends State<AnalysisPage>
   }
 
   /// 性价比胶囊条：整条满宽即底部导航栏的宽度（ListView 内容区 = 屏幕宽 - 24，
-  /// 与底部导航的外边距一致），第一名满宽、其余按相对百分比缩短，低于 20% 按 20% 显示。
-  /// 胶囊内只显示方案名 + 数值（性价比指数 / 整机功耗），不再展示跑分、价格与序号。
+  /// 与底部导航的外边距一致），第一名满宽、其余按相对百分比缩短，低于 20% 按 20% 显示
+  /// 胶囊内只显示方案名 + 数值（性价比指数 / 整机功耗），不再展示跑分、价格与序号
   Widget _capsule(ThemeData theme, PlanValue v, double topIndex) {
     final ratio = topIndex <= 0
         ? 1.0
@@ -648,7 +644,7 @@ class _AnalysisPageState extends State<AnalysisPage>
   }
 }
 
-/// 选择器里的一个选项：内置项目或自定义项目。
+/// 选择器里的一个选项：内置项目或自定义项目
 class _Choice {
   final ValueItem? builtin;
   final CustomItem? custom;
@@ -669,7 +665,7 @@ class _Choice {
   int get hashCode => isCustom ? custom!.id.hashCode : builtin.hashCode;
 }
 
-/// 自定义项目下：一个方案一行，附分数输入框；有分数的按排名显示序号。
+/// 自定义项目下：一个方案一行，附分数输入框；有分数的按排名显示序号
 class _CustomScoreCard extends StatefulWidget {
   const _CustomScoreCard({
     super.key,

@@ -8,8 +8,8 @@ import '../theme/app_theme.dart';
 
 const _categories = ['CPU', '主板', '显卡', '内存', '硬盘', '电源', '机箱', '其他'];
 
-/// 自定义添加硬件型号到「我的添加」：填品类、型号、品牌、参数规格和性价比跑分。
-/// 全部字段合并为一张大圆角卡片，字段间用横线分割，不再用胶囊输入框。
+/// 自定义添加硬件型号到「我的添加」：填品类、型号、品牌、参数规格和性价比跑分
+/// 全部字段合并为一张大圆角卡片，字段间用横线分割，不再用胶囊输入框
 class UserSpecFormPage extends StatefulWidget {
   const UserSpecFormPage({super.key});
 
@@ -26,7 +26,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
   String _brand = '其它';
   bool _saving = false;
 
-  /// 当前品类可选的品牌：主流品牌 + 「其它」。
+  /// 当前品类可选的品牌：主流品牌 + 「其它」
   List<String> get _brandOptions =>
       [...(kBrandGroups[_category] ?? const <String>[]), '其它'];
 
@@ -34,14 +34,14 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
   final Map<String, TextEditingController> _valueControllers = {};
   final _powerController = TextEditingController();
 
-  /// 当前品类参与「分析」排行的性价比项目。
+  /// 当前品类参与「分析」排行的性价比项目
   List<ValueItem> get _valueItems =>
       kValueItems.where((e) => e.category == _category).toList();
 
   @override
   void initState() {
     super.initState();
-    // 给一行空输入，方便直接填写。
+    // 给一行空输入，方便直接填写
     _specPairs.add(_EntryPair());
     for (final item in kValueItems) {
       _valueControllers[item.label] = TextEditingController();
@@ -69,7 +69,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
         .toList();
   }
 
-  /// 收集「性价比跑分」：只取当前品类对应项目里填了数值的，label 用分析约定的精确名。
+  /// 收集「性价比跑分」：只取当前品类对应项目里填了数值的，label 用分析约定的精确名
   List<SpecEntry> _collectValueBenches() {
     final result = <SpecEntry>[];
     for (final item in _valueItems) {
@@ -79,14 +79,14 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     return result;
   }
 
-  /// 功耗写入规格里的条目名：CPU 用「默认TDP」、显卡用「功耗」，其它品类无。
+  /// 功耗写入规格里的条目名：CPU 用「默认TDP」、显卡用「功耗」，其它品类无
   String? get _powerLabel {
     if (_category == 'CPU') return '默认TDP';
     if (_category == '显卡') return '功耗';
     return null;
   }
 
-  /// 收集功耗：填了才写入，label 用分析约定的精确名。
+  /// 收集功耗：填了才写入，label 用分析约定的精确名
   List<SpecEntry> _collectPower() {
     final label = _powerLabel;
     final text = _powerController.text.trim();
@@ -110,7 +110,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     Navigator.pop(context, true);
   }
 
-  /// 统一的无边框、无填充输入样式：把胶囊输入框换成大卡片内的纯行。
+  /// 统一的无边框、无填充输入样式：把胶囊输入框换成大卡片内的纯行
   InputDecoration _plain(String label, {String? hint}) {
     return InputDecoration(
       labelText: label,
@@ -153,7 +153,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
                           .toList(),
                       onChanged: (v) => setState(() {
                         _category = v!;
-                        // 换品类后，品牌重置为该品类的首个主流品牌。
+                        // 换品类后，品牌重置为该品类的首个主流品牌
                         _brand = _brandOptions.first;
                       }),
                     ),
@@ -166,7 +166,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
                     ),
                     const Divider(height: 1),
                     DropdownButtonFormField<String>(
-                      // 品类变化时用 key 重建，让品牌回退到该品类首个主流品牌。
+                      // 品类变化时用 key 重建，让品牌回退到该品类首个主流品牌
                       key: ValueKey(_category),
                       initialValue: _brand,
                       isExpanded: true,
@@ -199,7 +199,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _saving ? null : _save,
-              // 胶囊 + 半透明材质，和清单页「保存」等主按钮保持一致。
+              // 胶囊 + 半透明材质，和清单页「保存」等主按钮保持一致
               style: capsuleButtonStyle(Theme.of(context)),
               child: const Text('保存到「我的添加」'),
             ),
@@ -275,7 +275,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     );
   }
 
-  /// 性价比跑分：按当前品类列出「分析」用的跑分项，label 固定，只填数值（可跳过）。
+  /// 性价比跑分：按当前品类列出「分析」用的跑分项，label 固定，只填数值（可跳过）
   Widget _valueBenchEditor() {
     final theme = Theme.of(context);
     return Column(
@@ -305,7 +305,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
     );
   }
 
-  /// 功耗：CPU/显卡 填了才能参与「分析」的整机功耗排行（可跳过）。
+  /// 功耗：CPU/显卡 填了才能参与「分析」的整机功耗排行（可跳过）
   Widget _powerEditor() {
     final theme = Theme.of(context);
     return Column(
@@ -332,7 +332,7 @@ class _UserSpecFormPageState extends State<UserSpecFormPage> {
   }
 }
 
-/// 一组「名称 + 数值」输入框，持有各自的控制器。
+/// 一组「名称 + 数值」输入框，持有各自的控制器
 class _EntryPair {
   final TextEditingController label = TextEditingController();
   final TextEditingController value = TextEditingController();

@@ -1,9 +1,9 @@
 import '../utils/json_safe.dart';
 
-/// 单个配件价格的上限（元）。超过此值视为异常输入，提示用户重新输入。
+/// 单个配件价格上限（元），超过视为异常输入，提示用户重新输入
 const double kMaxPrice = 8388608;
 
-/// 整机方案里的一个配件（含价格）。
+/// 整机方案里的一个配件（含价格）
 class PlanComponent {
   final String category;
   final String brand;
@@ -40,14 +40,14 @@ class PlanComponent {
   }
 }
 
-/// 整机方案：按槽位（cpu/gpu/主板/内存/硬盘/电源/机箱）存放已选配件。
-/// 每个方案有自己的 id 和名称，可保存多个。
+/// 整机方案：按槽位（cpu/gpu/主板/内存/硬盘/电源/机箱）存放已选配件
+/// 每个方案有自己的 id 和名称，可保存多个
 class BuildPlan {
   final String id;
   final String name;
   final Map<String, PlanComponent> components;
 
-  /// 用户自定义的整机功耗（W）。为空时分析页自动按 CPU+显卡 计算。
+  /// 用户自定义的整机功耗（W），为空时分析页自动按 CPU+显卡 计算
   final double? customPower;
 
   BuildPlan({
@@ -58,7 +58,6 @@ class BuildPlan {
   })  : id = id ?? newId(),
         components = components ?? {};
 
-  /// 生成一个不重复的方案 id。
   static String newId() => 'plan_${DateTime.now().microsecondsSinceEpoch}';
 
   PlanComponent? operator [](String key) => components[key];
@@ -71,10 +70,8 @@ class BuildPlan {
     }
   }
 
-  /// 已选配件的总金额。
   double get total => components.values.fold(0, (s, c) => s + c.price);
 
-  /// 已选配件数。
   int get filledCount => components.length;
 
   factory BuildPlan.fromJson(Map<String, dynamic> json) {

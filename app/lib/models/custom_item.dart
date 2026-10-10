@@ -1,11 +1,11 @@
 import '../utils/json_safe.dart';
 
-/// 分析模块里的「自定义项目」：给整机方案手工打分后按分数排行。
+/// 分析模块里的「自定义项目」：给整机方案手工打分后按分数排行
 ///
 /// 分三类：
-/// - 游戏：填游戏名 + 预设画质描述，每个方案填平均帧率（avg FPS）。
-/// - 工程项目：填项目名（如 视频剪辑 / CAD），每个方案填性能分。
-/// - 其它：填名称，每个方案填性能分。
+/// - 游戏：填游戏名 + 预设画质描述，每个方案填平均帧率（avg FPS）
+/// - 工程项目：填项目名（如 视频剪辑 / CAD），每个方案填性能分
+/// - 其它：填名称，每个方案填性能分
 class CustomItem {
   final String id;
   final String category; // 游戏 / 工程项目 / 其它
@@ -34,10 +34,9 @@ class CustomItem {
     }
   }
 
-  /// 每个方案要填的分数名称。
   String get scoreLabel => category == '游戏' ? '平均帧率 (FPS)' : '性能分';
 
-  /// 下拉框里显示的完整名称（含类别前缀，游戏带画质描述）。
+  /// 下拉框显示的完整名称（含类别前缀，游戏带画质描述）
   String get fullLabel {
     if (category == '游戏' && description.isNotEmpty) {
       return '$category · $name（$description）';

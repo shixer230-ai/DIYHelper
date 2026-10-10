@@ -1,11 +1,11 @@
 import '../utils/json_safe.dart';
 
-/// 一件硬件的记录：品类、型号、品牌、价格、购买平台、参数备注。
+/// 一件硬件的记录：品类、型号、品牌、价格、购买平台、参数备注
 class HardwareItem {
   final String id;
   final String category; // 品类：CPU / 主板 / 显卡 ...
   final String brand; // 品牌，可留空
-  final String model; // 型号
+  final String model;
   final double price; // 价格（元）
   final String platform; // 购买平台：京东 / 淘宝 ...
   final String spec; // 参数备注，可留空

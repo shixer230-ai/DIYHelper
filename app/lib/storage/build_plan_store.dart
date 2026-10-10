@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/build_plan.dart';
 import '../utils/json_safe.dart';
 
-/// 保存多个「整机方案」以及当前选中的方案 id。
+/// 保存多个「整机方案」以及当前选中的方案 id
 class BuildPlanStore {
   static const _plansKey = 'build_plans';
   static const _currentKey = 'build_plan_current_id';
@@ -18,7 +18,7 @@ class BuildPlanStore {
     if (raw != null && raw.isNotEmpty) {
       return decodeMapList(raw).map((e) => BuildPlan.fromJson(e)).toList();
     }
-    // 迁移旧版单个方案（key = build_plan）。
+    // 迁移旧版单个方案（key = build_plan）
     final legacy = prefs.getString(_legacyKey);
     if (legacy != null && legacy.isNotEmpty) {
       final oldJson = decodeMap(legacy);
@@ -55,7 +55,7 @@ class BuildPlanStore {
     }
   }
 
-  /// 读取「待补删云端」的方案 id（离线删除时记下的墓碑）。
+  /// 读取「待补删云端」的方案 id（离线删除时记下的墓碑）
   Future<Set<String>> loadPendingDeleteIds() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_pendingKey);
@@ -66,12 +66,11 @@ class BuildPlanStore {
         return decoded.whereType<String>().toSet();
       }
     } catch (_) {
-      // 坏数据直接当空，不影响主流程。
+      // 坏数据直接当空，不影响主流程
     }
     return <String>{};
   }
 
-  /// 保存「待补删云端」的方案 id 集合。
   Future<void> savePendingDeleteIds(Set<String> ids) async {
     final prefs = await SharedPreferences.getInstance();
     if (ids.isEmpty) {

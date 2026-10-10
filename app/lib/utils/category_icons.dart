@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-/// 根据品类返回一个扁平图标（Lucide，ISC 开源可商用）。
+/// 根据品类返回一个扁平图标（Lucide，ISC 开源可商用）
 IconData categoryIcon(String category) {
   switch (category) {
     case 'CPU':
@@ -25,7 +25,7 @@ IconData categoryIcon(String category) {
   }
 }
 
-/// 根据品类返回一个主题色，让每个品类图标有专属颜色、整体多彩。
+/// 根据品类返回一个主题色，让每个品类图标有专属颜色、整体多彩
 Color categoryColor(String category) {
   switch (category) {
     case 'CPU':
@@ -49,7 +49,7 @@ Color categoryColor(String category) {
   }
 }
 
-/// 品类圆形徽章：用品类主题色的淡背景 + 同色图标，替代原来单一主题色的圆形图标。
+/// 品类圆形徽章：用品类主题色的淡背景 + 同色图标，替代原来单一主题色的圆形图标
 class CategoryBadge extends StatelessWidget {
   const CategoryBadge({super.key, required this.category});
 

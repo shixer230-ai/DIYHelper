@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import '../ai/ai_analysis.dart';
 import '../theme/app_theme.dart';
 
-/// AI 分析结果页：拿到云函数返回的全文后，逐字打字机展示（闪烁光标）。
+/// AI 分析结果页：拿到云函数返回的全文后，逐字打字机展示（闪烁光标）
 class AiAnalysisPage extends StatefulWidget {
   const AiAnalysisPage({
     super.key,
@@ -15,13 +15,13 @@ class AiAnalysisPage extends StatefulWidget {
     this.mode = 'general',
   });
 
-  /// 方案名（用于标题）。
+  /// 方案名（用于标题）
   final String title;
 
-  /// 已拼好的完整提示词（含方案信息）。
+  /// 已拼好的完整提示词（含方案信息）
   final String prompt;
 
-  /// 分析类型：'general'（常规）或 'reliability'（可靠性）。
+  /// 分析类型：'general'（常规）或 'reliability'（可靠性）
   final String mode;
 
   @override
@@ -37,7 +37,7 @@ class _AiAnalysisPageState extends State<AiAnalysisPage> {
   bool _running = false;
   bool _cursorOn = false;
 
-  /// 是否自动滚到底部：用户上滑时暂停，滑回底部再恢复。
+  /// 是否自动滚到底部：用户上滑时暂停，滑回底部再恢复
   bool _autoScroll = true;
 
   @override
@@ -68,7 +68,7 @@ class _AiAnalysisPageState extends State<AiAnalysisPage> {
       if (mounted) setState(() => _cursorOn = !_cursorOn);
     });
     try {
-      // 云函数里已完成「登录校验 + 限流 + 调 DeepSeek」，这里只拿最终文本。
+      // 云函数里已完成「登录校验 + 限流 + 调 DeepSeek」，这里只拿最终文本
       final full = await analyzeViaCloud(widget.prompt, mode: widget.mode);
       if (!mounted) return;
       await _typeOut(full);
@@ -78,7 +78,7 @@ class _AiAnalysisPageState extends State<AiAnalysisPage> {
     }
   }
 
-  /// 拿到全文后逐字打字机展示，模拟流式输出，避免一次性把整段生硬地弹出来。
+  /// 拿到全文后逐字打字机展示，模拟流式输出，避免一次性把整段生硬地弹出来
   Future<void> _typeOut(String full) async {
     const step = 2; // 每帧推进 2 个字
     const delay = Duration(milliseconds: 18);

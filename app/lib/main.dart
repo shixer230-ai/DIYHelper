@@ -1,7 +1,7 @@
 // DIYHelper —— DIY 硬件性价比助手
 // 版本：1.1.2 Beta
 // 设计与创作：CreativeDesign ZkeRurQwQ · 蓝色大肥鱼Accomplish
-// 版权署名，请勿盗用。
+// 版权署名，请勿盗用
 
 import 'dart:io';
 import 'dart:ui';
@@ -17,9 +17,9 @@ import 'theme/theme_controller.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ThemeController.instance.init();
-  // 初始化云开发（失败不阻塞启动，云功能在未就绪/未登录时给出提示即可）。
+  // 初始化云开发（失败不阻塞启动，未就绪/未登录时再提示）
   await CloudApp.init();
-  // 恢复云端登录会话（之前登录过且 token 未过期则自动登录）。
+  // 恢复云端登录会话（token 未过期则自动登录）
   await AuthService.instance.restore();
   runApp(const DiyHelperApp());
 }
@@ -36,7 +36,7 @@ class DiyHelperApp extends StatelessWidget {
         return MaterialApp(
           title: 'DIYAss',
           debugShowCheckedModeBanner: false,
-          // 全局回弹：Android 默认是「硬钳制」，改成 iOS 式橡皮筋回弹，所有列表统一生效。
+          // 全局回弹：Android 默认硬钳制，改成 iOS 式橡皮筋回弹
           scrollBehavior: const _AppScrollBehavior(),
           theme: buildLightTheme(
             seed: c.seed,
@@ -59,7 +59,7 @@ class DiyHelperApp extends StatelessWidget {
   }
 }
 
-/// 全屏背景层：有背景图时铺满并可选模糊，再叠半透明遮罩保证文字可读。
+/// 全屏背景层：有背景图时铺满可选模糊，再叠半透明遮罩保证文字可读
 class _AppBackground extends StatelessWidget {
   const _AppBackground({
     required this.path,
@@ -88,7 +88,7 @@ class _AppBackground extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         image,
-        // 遮罩：模糊开时图像已柔化，遮罩更淡；模糊关时遮罩略重，保证卡片/文字可读。
+        // 模糊开时遮罩更淡，模糊关时略重，保证可读
         ColoredBox(
           color: scheme.surface.withValues(alpha: blur ? 0.35 : 0.55),
         ),
@@ -98,8 +98,7 @@ class _AppBackground extends StatelessWidget {
   }
 }
 
-/// 全局滚动行为：把 Android 默认的「硬钳制」改成 iOS 式橡皮筋回弹，
-/// 让全 app 的可滚动列表统一带回弹效果。
+/// 全局滚动：Android 硬钳制改成 iOS 式橡皮筋回弹
 class _AppScrollBehavior extends MaterialScrollBehavior {
   const _AppScrollBehavior();
 

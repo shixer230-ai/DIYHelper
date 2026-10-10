@@ -11,12 +11,12 @@ import '../theme/app_theme.dart';
 const _categories = ['CPU', '主板', '显卡', '内存', '硬盘', '电源', '机箱', '其他'];
 const _platforms = ['京东', '淘宝', '拼多多', '天猫', '其他'];
 
-/// 录入 / 编辑一件硬件的表单页（从清单页某个品类进入）。
-/// 保存时会把型号同步到硬件库「我的添加」，并支持填写「性能分」参与分析排行。
+/// 录入 / 编辑一件硬件的表单页（从清单页某个品类进入）
+/// 保存时会把型号同步到硬件库「我的添加」，并支持填写「性能分」参与分析排行
 class HardwareFormPage extends StatefulWidget {
   const HardwareFormPage({super.key, this.category});
 
-  /// 从清单页某个品类 Tab 进入时传入，锁定品类不可改；为空则允许自由选择。
+  /// 从清单页某个品类 Tab 进入时传入，锁定品类不可改；为空则允许自由选择
   final String? category;
 
   @override
@@ -36,16 +36,15 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
   String _platform = _platforms.first;
   bool _saving = false;
 
-  /// 是否同步到硬件库「我的添加」。
   bool _syncToMine = true;
 
-  /// 性能分（性价比跑分）输入，按品类对应「分析」里的跑分项。
+  /// 性能分（性价比跑分）输入，按品类对应「分析」里的跑分项
   final Map<String, TextEditingController> _valueControllers = {};
 
-  /// 品类是否锁定（从清单页某个品类进入时锁定，避免把 CPU 误记成显卡）。
+  /// 品类是否锁定（从清单页某个品类进入时锁定，避免把 CPU 误记成显卡）
   bool get _categoryLocked => widget.category != null;
 
-  /// 当前品类参与「分析」排行的性价比项目。
+  /// 当前品类参与「分析」排行的性价比项目
   List<ValueItem> get _valueItems =>
       kValueItems.where((e) => e.category == _category).toList();
 
@@ -70,7 +69,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
     super.dispose();
   }
 
-  /// 收集填了数值的「性能分」条目，label 用分析约定的精确名。
+  /// 收集填了数值的「性能分」条目，label 用分析约定的精确名
   List<SpecEntry> _collectValueBenches() {
     final result = <SpecEntry>[];
     for (final item in _valueItems) {
@@ -100,7 +99,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
     setState(() => _saving = true);
     await _store.add(item);
 
-    // 同步到硬件库「我的添加」，方便之后在硬件库 / 整机方案里再选到这个型号。
+    // 同步到硬件库「我的添加」，方便之后在硬件库 / 整机方案里再选到这个型号
     if (_syncToMine) {
       await _userStore.add(HardwareSpec(
         id: 'user_${DateTime.now().microsecondsSinceEpoch}',
@@ -228,7 +227,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _saving ? null : _save,
-              // 与「保存到我的添加」等主按钮统一：胶囊圆角 + 半透明玻璃底色。
+              // 与「保存到我的添加」等主按钮统一：胶囊圆角 + 半透明玻璃底色
               style: capsuleButtonStyle(Theme.of(context)),
               child: const Text('保存'),
             ),
@@ -238,7 +237,7 @@ class _HardwareFormPageState extends State<HardwareFormPage> {
     );
   }
 
-  /// 性能分：按当前品类列出「分析」用的跑分项，label 固定，只填数值（可跳过）。
+  /// 性能分：按当前品类列出「分析」用的跑分项，label 固定，只填数值（可跳过）
   Widget _valueBenchEditor() {
     final theme = Theme.of(context);
     return Column(

@@ -1,18 +1,12 @@
-// 云函数：AI 分析（安全代理）
-//
-// 作用：
-//   1) 校验调用者已登录（未登录直接拒绝）——防滥用第一步；
-//   2) 按「用户 + 日期」记每日调用次数做限流；
-//   3) 用云端「环境变量」里的 DeepSeek Key 调用 AI，把结果返回给 App。
-//
-// 关键点：API Key 只存在这个云函数的环境变量里，App 里永远拿不到，也不会被打包进安装包。
+// AI 分析云函数：校验登录 + 限流 + 用云端环境变量的 DeepSeek Key 调 AI
+// Key 只存在这里的环境变量里，App 拿不到也不会打进安装包
 
 const cloudbase = require('@cloudbase/node-sdk');
 const https = require('https');
 
 const app = cloudbase.init({ env: cloudbase.SYMBOL_CURRENT_ENV });
 
-// 固定分析规则 + 输出格式（分点罗列）。与 App 内一致，改这里即可统一生效。
+// 常规分析的系统提示词（改这里统一生效）
 const SYSTEM_PROMPT = `你是一名资深 DIY 装机专家。请根据用户提供的整机配置做分析，务必遵守：
 1. 最近内存和存储芯片价格上涨幅度较大，这方面金额偏高是正常现象，不要因此批评用户。
 2. 一定不要评价「性价比」，只说说在哪些方面性价比较高即可。
@@ -33,7 +27,7 @@ const SYSTEM_PROMPT = `你是一名资深 DIY 装机专家。请根据用户提�
 其它事项:
     - （超频潜力、稳定性等）`;
 
-// 可靠性分析的固定规则 + 输出格式（分点罗列）。App 传 mode='reliability' 时用这份。
+// 可靠性分析系统提示词（mode='reliability' 时用）
 const RELIABILITY_SYSTEM_PROMPT = `你是一名资深 DIY 装机硬件检测专家。请根据用户提供的整机配置做「可靠性分析」，评估这套配置的稳定性与耐用风险，务必遵守：
 1. 功耗稳定性：评估整机功耗是否合理、电源（若有标注）功率是否足够、有无供电或散热隐患。
 2. 硬件稳定性：
@@ -53,44 +47,24 @@ const RELIABILITY_SYSTEM_PROMPT = `你是一名资深 DIY 装机硬件检测专�
 购买建议:
     - （要点）`;
 
-// 每人每天 AI 分析次数上限（防滥用）。
+// 每人每天上限（防滥用）
 const DAILY_LIMIT = 20;
 
-// 用户消息最大长度（合规）。
+// 用户消息最大长度
 const MAX_PROMPT_LEN = 4000;
 
-// 从 context 里尽力取出当前登录用户的稳定 ID。
-//
-// 注意：新版 @cloudbase/node-sdk 里，用户身份不再塞在 context.userInfo，
-// 而是要通过 app.auth().getUserInfo() 拿（返回 { uid, openId, customUserId }）。
-// 下面优先用官方 API，再兜底从 context 里翻常见字段。
-function getUid(context) {
-  // 方式一：官方 API（账号密码登录的用户在这里是 uid）。
+// 取当前登录用户 uid；只用官方 API，不读 context 里的运行身份字段（防公网绕过登录）
+function getUid() {
   try {
     const info = app.auth().getUserInfo();
     const v = info && (info.uid || info.customUserId || info.openId);
-    if (v) return String(v).trim();
+    return v ? String(v).trim() : '';
   } catch (e) {
-    // 个别运行时可能没有该方法，忽略，走兜底。
+    return '';
   }
-
-  // 方式二：兜底从 context.userInfo / context 里翻常见字段。
-  const c = context || {};
-  const ui = c.userInfo || c.user || {};
-  const candidates = [
-    ui.uid, c.uid, ui._id, c._id,
-    ui.customUserId, ui.custom_user_id, c.customUserId, c.custom_user_id,
-    ui.unionId, ui.unionid, c.unionId, c.unionid,
-    ui.openId, ui.openid, c.openId, c.openid,
-    c.OPENID, c.UIN, c.TENCENTCLOUD_UIN,
-  ];
-  for (const v of candidates) {
-    if (v != null && String(v).trim() !== '') return String(v).trim();
-  }
-  return '';
 }
 
-// 用 https 调 DeepSeek（不依赖第三方包，兼容各 Node 运行时）。
+// 用 https 直连 DeepSeek（无第三方依赖）
 function callDeepSeek(apiKey, prompt, systemPrompt) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
@@ -139,16 +113,13 @@ function callDeepSeek(apiKey, prompt, systemPrompt) {
 }
 
 exports.main = async (event, context) => {
-  // 排查用：打印取到的 uid 和 context 字段名，方便定位「未登录」问题（确认无误后可删）。
-  console.log('[aiChat] uid =', getUid(context), '| context keys =', Object.keys(context || {}));
-
-  // 1) 登录校验。
-  const uid = getUid(context);
+  // 登录校验
+  const uid = getUid();
   if (!uid) {
     return { error: '需要登录后才能使用 AI 分析' };
   }
 
-  // 2) 输入合规。
+  // 输入合规
   const prompt = event && (event.prompt || (event.data && event.data.prompt));
   if (typeof prompt !== 'string' || prompt.trim().length === 0) {
     return { error: '方案内容为空，无法分析' };
@@ -162,10 +133,10 @@ exports.main = async (event, context) => {
     return { error: '未配置 AI 接口 Key（请在云函数环境变量里填 DEEPSEEK_API_KEY）' };
   }
 
-  // 3) 限流：按「用户 + 日期」记每日次数（尽力而为，失败不阻断）。
+  // 限流：按用户+日期记次数，失败不阻断
   try {
     const db = app.database();
-    // 用 UTC+8（北京时间）的日期，符合国内用户的「每日」习惯。
+    // 用北京时间（UTC+8）算日期
     const date = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
     const docId = `${uid}_${date}`;
     const usage = await db.collection('ai_usage').doc(docId).get();
@@ -176,12 +147,12 @@ exports.main = async (event, context) => {
     }
     await db.collection('ai_usage').doc(docId).set({ count: count + 1, uid, date });
   } catch (e) {
-    // 限流记录失败不阻断（例如 ai_usage 集合还没建），避免数据库异常挡住正常用户。
+    // 失败不阻断
   }
 
-  // 4) 调 DeepSeek 并返回。
+  // 调 DeepSeek 返回
   try {
-    // 按 mode 选择提示词：reliability 走可靠性分析，否则默认常规分析。
+    // reliability 走可靠性分析，否则常规
     const mode = event && event.mode;
     const systemPrompt =
       mode === 'reliability' ? RELIABILITY_SYSTEM_PROMPT : SYSTEM_PROMPT;

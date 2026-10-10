@@ -17,7 +17,7 @@ import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
 import 'component_picker_page.dart';
 
-/// 整机方案的一个槽位。
+/// 整机方案的一个槽位
 class BuildSlot {
   final String key;
   final String label;
@@ -37,11 +37,11 @@ const kBuildSlots = [
   BuildSlot('case', '机箱', '机箱', required: false),
 ];
 
-/// 整机方案：支持多个方案（新建/切换/重命名/删除），按槽位选配件自动汇总总金额。
+/// 整机方案：支持多个方案（新建/切换/重命名/删除），按槽位选配件自动汇总总金额
 class BuildPlanPage extends StatefulWidget {
   const BuildPlanPage({super.key, this.isActive = true});
 
-  /// 当前是否为底部导航选中的标签页；从清单页点方案切过来时用于刷新当前方案。
+  /// 当前是否为底部导航选中的标签页；从清单页点方案切过来时用于刷新当前方案
   final bool isActive;
 
   @override
@@ -55,13 +55,16 @@ class _BuildPlanPageState extends State<BuildPlanPage>
   String? _currentId;
   bool _loading = true;
 
-  // 上传防连点。
+  // 上传防连点
   bool _uploading = false;
 
-  // 离线删除时没删掉的云端方案 id（墓碑），下次登录时补删。
+  // 云同步防连点
+  bool _syncing = false;
+
+  // 离线删除时没删掉的云端方案 id（墓碑），下次登录时补删
   Set<String> _pendingDeletes = {};
 
-  // 硬件库（预置 + 我的添加），用于计算默认的 CPU+显卡 功耗。
+  // 硬件库（预置 + 我的添加），用于计算默认的 CPU+显卡 功耗
   List<HardwareSpec> _library = [];
 
   @override
@@ -84,7 +87,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
   @override
   void didUpdateWidget(covariant BuildPlanPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 从清单页点某个方案跳过来时，重新读取当前方案 id。
+    // 从清单页点某个方案跳过来时，重新读取当前方案 id
     if (widget.isActive && !oldWidget.isActive) _load();
   }
 
@@ -101,6 +104,11 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       _library = [...kHardwareCatalog, ...userSpecs];
       _loading = false;
     });
+
+    // 已登录时自动从云同步（替代原先手动点「从云恢复」按钮）
+    if (AuthService.instance.isLoggedIn) {
+      _autoSyncFromCloud();
+    }
   }
 
   Future<void> _createPlan() async {
@@ -136,7 +144,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     await _store.saveCurrentId(null);
   }
 
-  /// 现有方案名（trim + 小写归一化）用于查重；重命名时排除自身，允许保留原名。
+  /// 现有方案名（trim + 小写归一化）用于查重；重命名时排除自身，允许保留原名
   Set<String> _takenNames(String? excludeId) => {
         for (final p in _plans)
           if (p.id != excludeId) p.name.trim().toLowerCase(),
@@ -190,9 +198,9 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     await _store.saveAll(_plans);
     await _store.saveCurrentId(_currentId);
 
-    // 无论如何先记墓碑：这个方案「本地已删，云端也不该再回来」。
+    // 无论如何先记墓碑：这个方案「本地已删，云端也不该再回来」
     // 墓碑要等下次恢复时确认云端真的没了才清除，防止云端删除刚提交、
-    // 读取还有短暂延迟时又把它拉回来。
+    // 读取还有短暂延迟时又把它拉回来
     _pendingDeletes.add(plan.id);
     await _store.savePendingDeleteIds(_pendingDeletes);
 
@@ -260,7 +268,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     await _store.saveAll(_plans);
   }
 
-  /// 移除某个槽位里已选的配件（槽位卡片最右侧的删除按钮）。
+  /// 移除某个槽位里已选的配件（槽位卡片最右侧的删除按钮）
   Future<void> _clearSlot(BuildSlot slot) async {
     final plan = _current;
     if (plan == null || plan[slot.key] == null) return;
@@ -275,7 +283,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     await _store.saveAll(_plans);
   }
 
-  /// 在方案详情页内联改某槽位配件的价格（实时刷新总价）。
+  /// 在方案详情页内联改某槽位配件的价格（实时刷新总价）
   Future<void> _setPrice(BuildSlot slot, double price) async {
     final plan = _current;
     if (plan == null) return;
@@ -311,7 +319,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     if (!mounted) return;
     final existingIndex = items.indexWhere((e) => e.planId == plan.id);
 
-    // 首次保存：确认后直接新增。
+    // 首次保存：确认后直接新增
     if (existingIndex < 0) {
       final ok = await showDialog<bool>(
         context: context,
@@ -336,7 +344,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       return;
     }
 
-    // 已经保存过这个方案：让用户选「覆盖原来的 / 另存为新名称 / 取消」。
+    // 已经保存过这个方案：让用户选「覆盖原来的 / 另存为新名称 / 取消」
     final choice = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -363,7 +371,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     if (!mounted) return;
 
     if (choice == 'overwrite') {
-      // 覆盖：保留原条目的 id 和录入时间，刷新价格/摘要/名称。
+      // 覆盖：保留原条目的 id 和录入时间，刷新价格/摘要/名称
       final old = items[existingIndex];
       items[existingIndex] = HardwareItem(
         id: old.id,
@@ -379,7 +387,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       await store.saveAll(items);
       _snack('已更新清单里的「${_planName(plan)}」');
     } else {
-      // 另存为新名称：新建一条快照条目，仍关联同一个方案。
+      // 另存为新名称：新建一条快照条目，仍关联同一个方案
       final name = await showDialog<String>(
         context: context,
         builder: (_) => _NameDialog(title: '新名称', initial: _planName(plan)),
@@ -390,7 +398,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     }
   }
 
-  /// 按槽位顺序列出配件摘要「品类 型号」。
+  /// 按槽位顺序列出配件摘要「品类 型号」
   String _summary(BuildPlan plan) => kBuildSlots
       .map((s) => plan[s.key])
       .whereType<PlanComponent>()
@@ -416,7 +424,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  /// 把当前方案手动上传到云（按方案 id 幂等覆盖）。
+  /// 把当前方案手动上传到云（按方案 id 幂等覆盖）
   Future<void> _uploadToCloud(BuildPlan plan) async {
     if (!AuthService.instance.isLoggedIn) {
       _snack('请先在「我的」页登录');
@@ -439,47 +447,40 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     }
   }
 
-  /// 从云拉取方案，按 id 去重后并入本地列表。
-  Future<void> _downloadFromCloud() async {
-    if (!AuthService.instance.isLoggedIn) {
-      _snack('请先在「我的」页登录');
-      return;
-    }
+  /// 已登录时自动从云拉取方案，按 id 去重并入本地；墓碑里的方案会被过滤
+  Future<void> _autoSyncFromCloud() async {
+    if (!AuthService.instance.isLoggedIn || _syncing) return;
+    setState(() => _syncing = true);
     try {
-      // 先把墓碑里的方案尽力从云端删掉（真正删干净）。
+      // 先把墓碑里的方案尽力从云端删掉（真正删干净）
       for (final id in _pendingDeletes.toList()) {
         try {
           await CloudSync.deletePlan(id);
-        } catch (_) {
-          // 删不掉就留着墓碑，下面过滤时仍会挡掉它。
-        }
+        } catch (_) {}
       }
-
       final cloudPlans = await CloudSync.downloadPlans();
       final cloudIds = cloudPlans.map((p) => p.id).toSet();
-
-      // 墓碑里已经不在云端的（删干净了），从墓碑移除。
+      // 墓碑里已经不在云端的（删干净了），从墓碑移除
       _pendingDeletes.removeWhere((id) => !cloudIds.contains(id));
       await _store.savePendingDeleteIds(_pendingDeletes);
-
-      // 还在云端的墓碑方案（删不掉 / 删除还没生效）过滤掉，避免刚删的又冒出来。
-      final visible =
-          cloudPlans.where((p) => !_pendingDeletes.contains(p.id)).toList();
-      if (visible.isEmpty) {
-        _snack('云端还没有方案');
-        return;
-      }
+      // 还在云端的墓碑方案（删除还没生效）过滤掉，避免刚删的又冒出来
       final existing = _plans.map((p) => p.id).toSet();
-      final fresh = visible.where((p) => !existing.contains(p.id)).toList();
-      setState(() => _plans.addAll(fresh));
-      await _store.saveAll(_plans);
-      _snack(fresh.isEmpty ? '云端方案已在本地' : '已从云恢复 ${fresh.length} 个方案');
-    } catch (e) {
-      _snack(e.toString().replaceFirst('Exception: ', ''));
+      final fresh = cloudPlans
+          .where((p) =>
+              !_pendingDeletes.contains(p.id) && !existing.contains(p.id))
+          .toList();
+      if (fresh.isNotEmpty) {
+        setState(() => _plans.addAll(fresh));
+        await _store.saveAll(_plans);
+      }
+    } catch (_) {
+      // 自动同步失败不打断本地使用
+    } finally {
+      if (mounted) setState(() => _syncing = false);
     }
   }
 
-  /// 自动的 CPU+显卡 功耗（匹配不到返回 null）。
+  /// 自动的 CPU+显卡 功耗（匹配不到返回 null）
   double? _autoPower(BuildPlan plan) => totalPower(plan, _library);
 
   Widget _powerCard(BuildPlan plan) {
@@ -510,7 +511,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
   String _fmt(double p) =>
       p == p.roundToDouble() ? p.toStringAsFixed(0) : p.toStringAsFixed(2);
 
-  /// AppBar 标题：方案名（放大）+ 版本标签（Beta 1.0.1）一行显示。
+  /// AppBar 标题：方案名（放大）+ 版本标签（Beta 1.0.1）一行显示
   Widget _planTitle(BuildContext context, BuildPlan plan) {
     final theme = Theme.of(context);
     return Row(
@@ -557,7 +558,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
                   floating: false,
                   backgroundColor: Colors.transparent,
                   surfaceTintColor: Colors.transparent,
-                  // 编辑态显示返回按钮（回到文件夹列表）；列表态不显示。
+                  // 编辑态显示返回按钮（回到文件夹列表）；列表态不显示
                   leading: plan == null
                       ? null
                       : IconButton(
@@ -574,12 +575,6 @@ class _BuildPlanPageState extends State<BuildPlanPage>
                         onPressed: _createPlan,
                         tooltip: '新建方案',
                         icon: const Icon(Icons.add),
-                      ),
-                    if (plan == null)
-                      IconButton(
-                        onPressed: _downloadFromCloud,
-                        tooltip: '从云恢复方案',
-                        icon: const Icon(Icons.cloud_download_outlined),
                       ),
                     if (plan != null && plan.components.isNotEmpty)
                       IconButton(
@@ -614,7 +609,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
             onPressed: _createPlan,
             icon: const Icon(Icons.add),
             label: const Text('新建方案'),
-            // 空状态居中展示，按钮按内容自适应宽度（不是满宽长条）。
+            // 空状态居中展示，按钮按内容自适应宽度（不是满宽长条）
             style: capsuleButtonStyle(theme, fullWidth: false),
           ),
         ],
@@ -622,7 +617,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     );
   }
 
-  /// 文件夹视图：每个整机方案一行，纵向堆叠展示；点击进入具体配置。
+  /// 文件夹视图：每个整机方案一行，纵向堆叠展示；点击进入具体配置
   Widget _folderList(BuildContext context) {
     if (_plans.isEmpty) return _emptyState(context);
     return ListView.builder(
@@ -658,7 +653,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
                 decoration: BoxDecoration(
                   color:
                       theme.colorScheme.primary.withValues(alpha: 0.12),
-                  // 文件夹图标改为圆形。
+                  // 文件夹图标改为圆形
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -691,7 +686,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
                 ),
               ),
               const SizedBox(width: 8),
-              // 总金额：放在最右侧（三个点左侧），放大突出。
+              // 总金额：放在最右侧（三个点左侧），放大突出
               Text(
                 '¥${_fmt(plan.total)}',
                 style: theme.textTheme.titleMedium?.copyWith(
@@ -743,7 +738,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
           onPressed: plan.components.isEmpty ? null : _saveToItems,
           icon: const Icon(Icons.save_alt),
           label: const Text('保存到我的清单'),
-          // 与「加入我的清单」等主按钮统一：胶囊圆角 + 半透明底色。
+          // 与「加入我的清单」等主按钮统一：胶囊圆角 + 半透明底色
           style: capsuleButtonStyle(theme),
         ),
         const SizedBox(height: 12),
@@ -759,7 +754,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     );
   }
 
-  /// 总金额不再用卡片，直接以文字显示在最上方。
+  /// 总金额不再用卡片，直接以文字显示在最上方
   Widget _totalLine(ThemeData theme, int filled, double total) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
@@ -768,7 +763,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
         children: [
           Text(
             '总金额',
-            // 与金额同字号（headlineSmall），保持一行观感统一。
+            // 与金额同字号（headlineSmall），保持一行观感统一
             style: theme.textTheme.headlineSmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -797,7 +792,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     );
   }
 
-  /// 兼容性提醒：黄色感叹号卡片，有隐患才显示（只提醒、不阻断保存）。
+  /// 兼容性提醒：黄色感叹号卡片，有隐患才显示（只提醒、不阻断保存）
   Widget _compatCard(ThemeData theme, BuildPlan plan) {
     final issues = checkCompatibility(plan, _library);
     if (issues.isEmpty) return const SizedBox.shrink();
@@ -848,7 +843,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     );
   }
 
-  /// 所有槽位合并为一张大圆角卡片，内部每行一个槽位（可内联改价格）。
+  /// 所有槽位合并为一张大圆角卡片，内部每行一个槽位（可内联改价格）
   Widget _slotsCard(BuildPlan plan) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -884,7 +879,7 @@ String _nextName(List<BuildPlan> plans) {
 String _fmt(double p) =>
     p == p.roundToDouble() ? p.toStringAsFixed(0) : p.toStringAsFixed(2);
 
-/// 整机功耗编辑器：显示自动计算的 CPU+显卡 功耗，允许用户自定义（不低于自动值）。
+/// 整机功耗编辑器：显示自动计算的 CPU+显卡 功耗，允许用户自定义（不低于自动值）
 class _PowerEditor extends StatefulWidget {
   const _PowerEditor({
     required this.plan,
@@ -975,7 +970,7 @@ class _PowerEditorState extends State<_PowerEditor> {
 }
 
 /// 大圆角卡片内的一行槽位：显示品类图标 + 槽位名 + 型号/品牌，
-/// 已选时右侧提供内联价格输入（实时改价）与移除按钮。
+/// 已选时右侧提供内联价格输入（实时改价）与移除按钮
 class _SlotRow extends StatefulWidget {
   const _SlotRow({
     super.key,
@@ -1007,7 +1002,7 @@ class _SlotRowState extends State<_SlotRow> {
   @override
   void didUpdateWidget(covariant _SlotRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 只有换型号（重新选择）才重置价格框；用户自己改价时不打断输入。
+    // 只有换型号（重新选择）才重置价格框；用户自己改价时不打断输入
     final modelChanged = oldWidget.comp?.model != widget.comp?.model ||
         (oldWidget.comp == null) != (widget.comp == null);
     if (modelChanged) {
@@ -1114,7 +1109,7 @@ class _SlotRowState extends State<_SlotRow> {
   }
 }
 
-/// 输入方案名称的对话框，返回名称（非空）；与已有方案重名时不关闭并提示。
+/// 输入方案名称的对话框，返回名称（非空）；与已有方案重名时不关闭并提示
 class _NameDialog extends StatefulWidget {
   const _NameDialog({
     required this.title,
@@ -1125,7 +1120,7 @@ class _NameDialog extends StatefulWidget {
   final String title;
   final String initial;
 
-  /// 不允许重名的名称集合（已归一化：trim + 小写）；重命名时不含自身。
+  /// 不允许重名的名称集合（已归一化：trim + 小写）；重命名时不含自身
   final Set<String> forbidden;
 
   @override
@@ -1178,4 +1173,3 @@ class _NameDialogState extends State<_NameDialog> {
     );
   }
 }
-

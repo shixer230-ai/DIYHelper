@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/hardware_spec.dart';
 import '../utils/json_safe.dart';
 
-/// 保存硬件库中「我的添加」专栏里的型号（自定义 + 从预置库收藏）。
+/// 保存硬件库中「我的添加」专栏里的型号（自定义 + 从预置库收藏）
 class UserSpecStore {
   static const _key = 'user_specs';
 

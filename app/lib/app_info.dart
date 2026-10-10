@@ -1,10 +1,10 @@
-// 应用级信息：版本号、更新日志、版权署名。
-// 版本号与署名在此统一维护，避免多处写死导致不一致。
+// 应用级信息：版本号、更新日志、版权署名
+// 版本号与署名在此统一维护，避免多处写死
 
-/// 当前对外版本号（显示在「我的」页）。
-const String kAppVersion = '2.1.0';
+/// 当前对外版本号（显示在「我的」页）
+const String kAppVersion = '2.2.0';
 
-/// 版本更新日志，最新的排在最前。
+/// 版本更新日志，最新的排在最前
 class VersionLogEntry {
   const VersionLogEntry(this.version, this.items);
 
@@ -13,6 +13,14 @@ class VersionLogEntry {
 }
 
 const List<VersionLogEntry> kVersionLog = [
+  VersionLogEntry('2.2.0', [
+    '单核性价比改为指数权重算法：按单核分数排序，相邻每高 20% 权重翻倍，再除以整机价格',
+    '硬件库补入 ROG / 海韵 / 海盗船等 1000W 以上高功率电源',
+    '整机方案「手动填写型号和价格」按钮改液态玻璃悬浮，与底部导航一致',
+    '整机方案云同步改为进入页面自动同步（移除手动「从云恢复」按钮）',
+    '安全加固：删除方案/项目校验归属，云函数取用户 ID 去掉运行身份兜底',
+    '清理全项目注释、统一去掉句号',
+  ]),
   VersionLogEntry('2.1.0', [
     'AI 分析改用云函数安全代理：登录校验 + 每人每天限流 + 云端 Key 调 DeepSeek，Key 不再打进安装包',
     '新增「可靠性分析」：AI 检测功耗稳定性、魔改 CPU / 矿卡 / 洋垃圾等硬件稳定性风险',
@@ -97,5 +105,5 @@ const List<VersionLogEntry> kVersionLog = [
   ]),
 ];
 
-/// 设计与创作署名（防止盗用）。
+/// 设计与创作署名（防止盗用）
 const String kCredit = 'CreativeDesign ZkeRurQwQ · 蓝色大肥鱼Accomplish';

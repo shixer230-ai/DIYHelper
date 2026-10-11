@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:cloudbase_flutter/cloudbase_flutter.dart';
 
 import '../models/build_plan.dart';
 import '../models/custom_item.dart';
+import '../models/hardware_spec.dart';
 import 'auth_service.dart';
 import 'cloud_app.dart';
 
@@ -153,6 +156,16 @@ class CloudSync {
     }
   }
 
+  /// 拉取云端发行的硬件库（共享集合，无 owner 隔离，读参考硬件）
+  static Future<List<HardwareSpec>> downloadHardwareCatalog() async {
+    final db = CloudApp.app.database();
+    final res = await db.collection('hardware_catalog').limit(5000).get();
+    if (!res.isSuccess) {
+      throw Exception('拉取硬件库失败：${res.message ?? res.code}');
+    }
+    return res.data.map((e) => HardwareSpec.fromJson(e)).toList();
+  }
+
   /// 上传头像到云存储，并把 fileId 存进账号资料
   static Future<void> uploadAvatar(List<int> bytes, String ext) async {
     final storage = CloudApp.app.storage.from();
@@ -180,5 +193,35 @@ class CloudSync {
     final storage = CloudApp.app.storage.from();
     final res = await storage.getDownloadUrls([fileId], expiresIn: 3600);
     return res.data?.first.downloadUrl;
+  }
+
+  /// 用爱发电订单号自助开通 donator（云函数查单并写入 donators）
+  static Future<void> verifyDonation(String orderNo) async {
+    _requireUid();
+    final res = await CloudApp.app.callFunction(
+      name: 'verifyDonation',
+      data: {'orderNo': orderNo},
+    );
+    if (!res.isSuccess) {
+      throw Exception(res.message ?? '调用失败');
+    }
+    Map<String, dynamic>? map;
+    final result = res.result;
+    if (result is Map) {
+      map = Map<String, dynamic>.from(result);
+    } else if (result is String) {
+      try {
+        map = jsonDecode(result) as Map<String, dynamic>;
+      } catch (_) {
+        // 非 JSON 按无结果处理
+      }
+    }
+    final error = map?['error'];
+    if (error is String && error.isNotEmpty) {
+      throw Exception(error);
+    }
+    if (map?['ok'] != true) {
+      throw Exception('开通失败，请重试');
+    }
   }
 }

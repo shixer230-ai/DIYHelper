@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_bottom_navbar_plus/liquid_glass_bottom_navbar_plus.dart';
 
 import '../data/hardware_catalog.dart';
+import '../data/hardware_library.dart';
 import '../models/build_plan.dart';
 import '../models/hardware_item.dart';
 import '../models/hardware_spec.dart';
 import '../storage/hardware_store.dart';
-import '../storage/user_spec_store.dart';
 import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
 
@@ -30,7 +30,6 @@ class ComponentPickerPage extends StatefulWidget {
 
 class _ComponentPickerPageState extends State<ComponentPickerPage> {
   final _store = HardwareStore();
-  final _userStore = UserSpecStore();
   final _searchController = TextEditingController();
   List<HardwareItem> _items = [];
   List<HardwareSpec> _library = [];
@@ -77,21 +76,11 @@ class _ComponentPickerPageState extends State<ComponentPickerPage> {
 
   Future<void> _load() async {
     final allItems = await _store.loadAll();
-    final userSpecs = await _userStore.loadAll();
+    final lib = await loadHardwareLibrary();
     if (!mounted) return;
     setState(() {
       _items = allItems.where((e) => e.category == widget.category).toList();
-      // 硬件库：先放预置型号，再并入「我的添加」（按 id 去重）
-      _library = [];
-      for (final s in kHardwareCatalog) {
-        if (s.category == widget.category) _library.add(s);
-      }
-      for (final s in userSpecs) {
-        if (s.category == widget.category &&
-            !_library.any((e) => e.id == s.id)) {
-          _library.add(s);
-        }
-      }
+      _library = lib.where((s) => s.category == widget.category).toList();
     });
   }
 

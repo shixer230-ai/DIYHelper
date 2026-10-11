@@ -5,13 +5,12 @@ import '../ai/ai_analysis.dart';
 import '../analysis/value_index.dart';
 import '../cloud/auth_service.dart';
 import '../cloud/cloud_sync.dart';
-import '../data/hardware_catalog.dart';
+import '../data/hardware_library.dart';
 import '../models/build_plan.dart';
 import '../models/custom_item.dart';
 import '../models/hardware_spec.dart';
 import '../storage/build_plan_store.dart';
 import '../storage/custom_item_store.dart';
-import '../storage/user_spec_store.dart';
 import '../theme/app_theme.dart';
 import 'ai_analysis_page.dart';
 import 'custom_item_form_page.dart';
@@ -30,7 +29,6 @@ class AnalysisPage extends StatefulWidget {
 class _AnalysisPageState extends State<AnalysisPage>
     with AutomaticKeepAliveClientMixin {
   final _planStore = BuildPlanStore();
-  final _userStore = UserSpecStore();
   final _customStore = CustomItemStore();
 
   List<BuildPlan> _plans = [];
@@ -62,14 +60,14 @@ class _AnalysisPageState extends State<AnalysisPage>
 
   Future<void> _load() async {
     final plans = await _planStore.loadAll();
-    final userSpecs = await _userStore.loadAll();
+    final lib = await loadHardwareLibrary();
     final customs = await _customStore.loadAll();
     final pending = await _customStore.loadPendingDeleteIds();
     final planPending = await _planStore.loadPendingDeleteIds();
     if (!mounted) return;
     setState(() {
       _plans = plans;
-      _library = [...kHardwareCatalog, ...userSpecs];
+      _library = lib;
       _customItems = customs;
       _pendingDeletes = pending;
       _planPendingDeletes = planPending;
@@ -482,6 +480,11 @@ class _AnalysisPageState extends State<AnalysisPage>
     final results = rankPlans(_plans, _builtin, _library);
     final skipped = _plans.length - results.length;
     final topIndex = results.isEmpty ? 0.0 : results.first.index;
+    final topPrice = results.isEmpty ? 0.0 : results.first.price;
+    // 第一名与后续方案价差 ≥30% 时，只在顶部提示一次
+    final showPriceWarn = !_isPower &&
+        topPrice > 0 &&
+        results.skip(1).any((r) => (r.price - topPrice).abs() >= topPrice * 0.30);
     return ListView(
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
@@ -493,11 +496,11 @@ class _AnalysisPageState extends State<AnalysisPage>
         12 + bottomNavClearance(context),
       ),
       children: [
+        if (showPriceWarn) _priceWarnBanner(theme),
         if (results.isEmpty)
           _empty(theme)
         else
-          for (var i = 0; i < results.length; i++)
-            _capsule(theme, results[i], topIndex),
+          for (final v in results) _capsule(theme, v, topIndex),
         if (results.isNotEmpty && skipped > 0)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -582,6 +585,33 @@ class _AnalysisPageState extends State<AnalysisPage>
                 : '所选「${_builtin.label}」下，方案里缺少对应部件或型号未匹配到硬件库',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 顶部价差提示：第一名与后续方案价差 ≥30% 时显示一次（胶囊样式，与排行胶囊统一）
+  Widget _priceWarnBanner(ThemeData theme) {
+    return Container(
+      height: 44,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber, color: Colors.amber, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '性价比参考性较低，建议比价近似价格区间的方案',
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(color: Colors.amber),
+            ),
           ),
         ],
       ),

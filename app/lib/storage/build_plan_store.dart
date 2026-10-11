@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/default_plans.dart';
 import '../models/build_plan.dart';
 import '../utils/json_safe.dart';
 
@@ -11,6 +12,7 @@ class BuildPlanStore {
   static const _currentKey = 'build_plan_current_id';
   static const _pendingKey = 'build_plan_pending_delete'; // 待补删云端的方案 id
   static const _legacyKey = 'build_plan'; // 旧版单个方案，迁移后删除
+  static const _seededKey = 'build_plan_defaults_seeded'; // 是否已写入默认配置
 
   Future<List<BuildPlan>> loadAll() async {
     final prefs = await SharedPreferences.getInstance();
@@ -29,8 +31,16 @@ class BuildPlanStore {
         ];
         await prefs.remove(_legacyKey);
         await saveAll(migrated);
+        await prefs.setBool(_seededKey, true);
         return migrated;
       }
+    }
+    // 首次启动且从未播种过：写入 5 套默认配置
+    if (!(prefs.getBool(_seededKey) ?? false)) {
+      await prefs.setBool(_seededKey, true);
+      await saveAll(kDefaultPlans);
+      // 返回新实例，避免多处共享同一 list 引用
+      return kDefaultPlans.map((p) => BuildPlan.fromJson(p.toJson())).toList();
     }
     return [];
   }

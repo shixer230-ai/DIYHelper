@@ -36,3 +36,8 @@ bin/
 
 # 云函数部署产物（zip 由 index.js + package.json 打包生成，不入库）
 cloudfunctions/aiChat/aiChat.zip
+cloudfunctions/publishHardware/publishHardware.zip
+cloudfunctions/verifyDonation/verifyDonation.zip
+
+# Android Gradle 构建产物（assembleRelease 生成，不入库）
+app/android/build/

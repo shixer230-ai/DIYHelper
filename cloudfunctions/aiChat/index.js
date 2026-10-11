@@ -29,12 +29,13 @@ const SYSTEM_PROMPT = `你是一名资深 DIY 装机专家。请根据用户提�
 
 // 可靠性分析系统提示词（mode='reliability' 时用）
 const RELIABILITY_SYSTEM_PROMPT = `你是一名资深 DIY 装机硬件检测专家。请根据用户提供的整机配置做「可靠性分析」，评估这套配置的稳定性与耐用风险，务必遵守：
-1. 功耗稳定性：评估整机功耗是否合理、电源（若有标注）功率是否足够、有无供电或散热隐患。
-2. 硬件稳定性：
+1. 只分析可靠性：不评价价格、不评价性价比，也不比较各配件价格高低。
+2. 功耗稳定性：评估整机功耗是否合理、电源（若有标注）功率是否足够、有无供电或散热隐患。
+3. 硬件稳定性：
    - 识别「魔改 CPU」（笔记本 CPU 改台式、寨板、工程样品 ES 版等）及其潜在风险（无官方保修、温度/兼容性问题等）。
    - 判断显卡是否可能经历过「矿潮」（矿卡）：结合型号、年份、显存类型，判断翻新/矿卡风险，并给出选购建议。
    - 评估二手、洋垃圾、杂牌、翻新硬件的稳定性风险；注意语气客观，不要贬低「洋垃圾」——它们性价比高是事实，只客观说明风险即可。
-3. 严格按以下固定格式输出（约 512 tokens），不要输出任何多余内容，每个板块下用「- 」分点罗列（每点单独一行，不要写成一整段）：
+4. 严格按以下固定格式输出（约 512 tokens），不要输出任何多余内容，每个板块下用「- 」分点罗列（每点单独一行，不要写成一整段）：
 功耗稳定性:
     - （要点）
 
@@ -50,6 +51,9 @@ const RELIABILITY_SYSTEM_PROMPT = `你是一名资深 DIY 装机硬件检测专�
 // 每人每天上限（防滥用）
 const DAILY_LIMIT = 20;
 
+// 捐赠用户每天上限
+const DONATOR_DAILY_LIMIT = 50;
+
 // 用户消息最大长度
 const MAX_PROMPT_LEN = 4000;
 
@@ -61,6 +65,18 @@ function getUid() {
     return v ? String(v).trim() : '';
   } catch (e) {
     return '';
+  }
+}
+
+// 是否捐赠用户（donators 集合里 enabled=true，文档 id 用 uid）
+async function isDonator(uid) {
+  try {
+    const db = app.database();
+    const res = await db.collection('donators').doc(uid).get();
+    const row = res && res.data && res.data[0];
+    return !!(row && row.enabled === true);
+  } catch (e) {
+    return false;
   }
 }
 
@@ -133,7 +149,7 @@ exports.main = async (event, context) => {
     return { error: '未配置 AI 接口 Key（请在云函数环境变量里填 DEEPSEEK_API_KEY）' };
   }
 
-  // 限流：按用户+日期记次数，失败不阻断
+  // 限流：按用户+日期记次数，捐赠用户放宽到 50，失败不阻断
   try {
     const db = app.database();
     // 用北京时间（UTC+8）算日期
@@ -142,8 +158,9 @@ exports.main = async (event, context) => {
     const usage = await db.collection('ai_usage').doc(docId).get();
     const row = usage && usage.data && usage.data[0];
     const count = (row && row.count) || 0;
-    if (count >= DAILY_LIMIT) {
-      return { error: `今日 AI 分析次数已用完（每天 ${DAILY_LIMIT} 次）` };
+    const limit = (await isDonator(uid)) ? DONATOR_DAILY_LIMIT : DAILY_LIMIT;
+    if (count >= limit) {
+      return { error: `今日 AI 分析次数已用完（每天 ${limit} 次）` };
     }
     await db.collection('ai_usage').doc(docId).set({ count: count + 1, uid, date });
   } catch (e) {

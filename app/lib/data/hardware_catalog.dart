@@ -2521,6 +2521,98 @@ const List<HardwareSpec> kHardwareCatalog = [
     ],
   ),
 
+  // ===== 内存 补充：单条型号 =====
+  HardwareSpec(
+    id: 'ram_ddr5_6000_16g_single',
+    category: '内存',
+    brand: '金士顿',
+    model: 'FURY Beast DDR5-6000 16GB（16G×1）',
+    specs: [
+      SpecEntry('类型', 'DDR5'),
+      SpecEntry('容量', '16GB（16GB×1）'),
+      SpecEntry('频率', '6000MHz'),
+      SpecEntry('时序', 'CL36'),
+      SpecEntry('电压', '1.35V'),
+    ],
+    benchmarks: [
+      SpecEntry('AIDA64 读取', '约 76000 MB/s'),
+      SpecEntry('AIDA64 写入', '约 73000 MB/s'),
+      SpecEntry('AIDA64 延迟', '约 72 ns'),
+    ],
+  ),
+  HardwareSpec(
+    id: 'ram_ddr5_6000_32g_single',
+    category: '内存',
+    brand: '芝奇',
+    model: 'Trident Z5 DDR5-6000 32GB（32G×1）',
+    specs: [
+      SpecEntry('类型', 'DDR5'),
+      SpecEntry('容量', '32GB（32GB×1）'),
+      SpecEntry('频率', '6000MHz'),
+      SpecEntry('时序', 'CL30'),
+      SpecEntry('电压', '1.35V'),
+    ],
+    benchmarks: [
+      SpecEntry('AIDA64 读取', '约 78000 MB/s'),
+      SpecEntry('AIDA64 写入', '约 75000 MB/s'),
+      SpecEntry('AIDA64 延迟', '约 68 ns'),
+    ],
+  ),
+  HardwareSpec(
+    id: 'ram_ddr4_3200_16g_single',
+    category: '内存',
+    brand: '金士顿',
+    model: 'FURY DDR4-3200 16GB（16G×1）',
+    specs: [
+      SpecEntry('类型', 'DDR4'),
+      SpecEntry('容量', '16GB（16GB×1）'),
+      SpecEntry('频率', '3200MHz'),
+      SpecEntry('时序', 'CL16'),
+      SpecEntry('电压', '1.35V'),
+    ],
+    benchmarks: [
+      SpecEntry('AIDA64 读取', '约 24000 MB/s'),
+      SpecEntry('AIDA64 写入', '约 23000 MB/s'),
+      SpecEntry('AIDA64 延迟', '约 70 ns'),
+    ],
+  ),
+  HardwareSpec(
+    id: 'ram_ddr4_3200_32g_single',
+    category: '内存',
+    brand: '英睿达',
+    model: '铂胜 DDR4-3200 32GB（32G×1）',
+    specs: [
+      SpecEntry('类型', 'DDR4'),
+      SpecEntry('容量', '32GB（32GB×1）'),
+      SpecEntry('频率', '3200MHz'),
+      SpecEntry('时序', 'CL22'),
+      SpecEntry('电压', '1.2V'),
+    ],
+    benchmarks: [
+      SpecEntry('AIDA64 读取', '约 25000 MB/s'),
+      SpecEntry('AIDA64 写入', '约 24000 MB/s'),
+      SpecEntry('AIDA64 延迟', '约 80 ns'),
+    ],
+  ),
+  HardwareSpec(
+    id: 'ram_ddr4_3200_8g_single',
+    category: '内存',
+    brand: '光威',
+    model: '天策 DDR4-3200 8GB（8G×1）',
+    specs: [
+      SpecEntry('类型', 'DDR4'),
+      SpecEntry('容量', '8GB（8GB×1）'),
+      SpecEntry('频率', '3200MHz'),
+      SpecEntry('时序', 'CL16'),
+      SpecEntry('电压', '1.35V'),
+    ],
+    benchmarks: [
+      SpecEntry('AIDA64 读取', '约 23000 MB/s'),
+      SpecEntry('AIDA64 写入', '约 22000 MB/s'),
+      SpecEntry('AIDA64 延迟', '约 70 ns'),
+    ],
+  ),
+
   // ===== 硬盘 =====
   HardwareSpec(
     id: 'ssd_990pro_1tb',

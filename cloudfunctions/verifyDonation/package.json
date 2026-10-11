@@ -1,0 +1,9 @@
+{
+  "name": "verifyDonation",
+  "version": "1.0.0",
+  "description": "捐赠验证：用爱发电订单号查单并自动开通 donator",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.9.0"
+  }
+}

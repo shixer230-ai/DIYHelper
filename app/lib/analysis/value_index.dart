@@ -203,7 +203,7 @@ List<PlanValue> rankWeightedPlans(
       partModel: e.model,
       bench: e.bench,
       price: e.plan.total,
-      index: weights[i] / e.plan.total,
+      index: weights[i] / e.plan.total * 100,
     ));
   }
   results.sort((a, b) => b.index.compareTo(a.index));

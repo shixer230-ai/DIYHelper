@@ -6,13 +6,12 @@ import '../analysis/compat_check.dart';
 import '../cloud/auth_service.dart';
 import '../cloud/cloud_sync.dart';
 import '../analysis/value_index.dart';
-import '../data/hardware_catalog.dart';
+import '../data/hardware_library.dart';
 import '../models/build_plan.dart';
 import '../models/hardware_item.dart';
 import '../models/hardware_spec.dart';
 import '../storage/build_plan_store.dart';
 import '../storage/hardware_store.dart';
-import '../storage/user_spec_store.dart';
 import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
 import 'component_picker_page.dart';
@@ -55,11 +54,12 @@ class _BuildPlanPageState extends State<BuildPlanPage>
   String? _currentId;
   bool _loading = true;
 
-  // 上传防连点
-  bool _uploading = false;
-
   // 云同步防连点
   bool _syncing = false;
+
+  // 进入方案编辑时的快照 + 是否有未保存改动（退出时据此询问是否保存）
+  BuildPlan? _editSnapshot;
+  bool _dirty = false;
 
   // 离线删除时没删掉的云端方案 id（墓碑），下次登录时补删
   Set<String> _pendingDeletes = {};
@@ -88,20 +88,20 @@ class _BuildPlanPageState extends State<BuildPlanPage>
   void didUpdateWidget(covariant BuildPlanPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 从清单页点某个方案跳过来时，重新读取当前方案 id
-    if (widget.isActive && !oldWidget.isActive) _load();
+    if (widget.isActive && !oldWidget.isActive && !_dirty) _load();
   }
 
   Future<void> _load() async {
     final plans = await _store.loadAll();
     final currentId = await _store.loadCurrentId();
     final pending = await _store.loadPendingDeleteIds();
-    final userSpecs = await UserSpecStore().loadAll();
+    final lib = await loadHardwareLibrary();
     if (!mounted) return;
     setState(() {
       _plans = plans;
       _currentId = currentId;
       _pendingDeletes = pending;
-      _library = [...kHardwareCatalog, ...userSpecs];
+      _library = lib;
       _loading = false;
     });
 
@@ -129,18 +129,58 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     setState(() {
       _plans.add(plan);
       _currentId = plan.id;
+      _editSnapshot = _copyPlan(plan);
+      _dirty = false;
     });
     await _store.saveAll(_plans);
     await _store.saveCurrentId(plan.id);
   }
 
   Future<void> _openPlan(BuildPlan plan) async {
-    setState(() => _currentId = plan.id);
+    setState(() {
+      _currentId = plan.id;
+      _editSnapshot = _copyPlan(plan);
+      _dirty = false;
+    });
     await _store.saveCurrentId(plan.id);
   }
 
   Future<void> _backToList() async {
-    setState(() => _currentId = null);
+    if (_dirty) {
+      final action = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('是否保存修改'),
+          content: const Text('有未保存的修改，要保存吗？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'discard'),
+              child: const Text('不保存'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, 'save'),
+              style: capsuleButtonStyle(Theme.of(context), fullWidth: false),
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      );
+      if (action == null) return; // 点外部取消，留在编辑页
+      final plan = _current;
+      if (action == 'save') {
+        await _store.saveAll(_plans);
+        if (plan != null) await _autoUpload(plan);
+      } else {
+        // 不保存：还原进入编辑前的快照
+        if (plan != null && _editSnapshot != null) {
+          setState(() => _replace(plan.id, _editSnapshot!));
+        }
+      }
+    }
+    setState(() {
+      _currentId = null;
+      _dirty = false;
+    });
     await _store.saveCurrentId(null);
   }
 
@@ -160,16 +200,19 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       ),
     );
     if (name == null) return;
+    final updated = BuildPlan(
+      id: plan.id,
+      name: name,
+      components: plan.components,
+      storages: plan.storages,
+      customPower: plan.customPower,
+    );
     setState(() {
       final i = _plans.indexWhere((p) => p.id == plan.id);
-      _plans[i] = BuildPlan(
-        id: plan.id,
-        name: name,
-        components: plan.components,
-        customPower: plan.customPower,
-      );
+      _plans[i] = updated;
     });
     await _store.saveAll(_plans);
+    await _autoUpload(updated);
   }
 
   Future<void> _delete(BuildPlan plan) async {
@@ -239,8 +282,8 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     if (ok != true) return;
     setState(() {
       _replace(plan.id, BuildPlan(id: plan.id, name: plan.name));
+      _dirty = true;
     });
-    await _store.saveAll(_plans);
   }
 
   Future<void> _pick(BuildSlot slot) async {
@@ -261,11 +304,14 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       id: plan.id,
       name: plan.name,
       components: Map.of(plan.components),
+      storages: List.of(plan.storages),
       customPower: plan.customPower,
     );
     updated.set(slot.key, result.$1 ? null : result.$2);
-    setState(() => _replace(plan.id, updated));
-    await _store.saveAll(_plans);
+    setState(() {
+      _replace(plan.id, updated);
+      _dirty = true;
+    });
   }
 
   /// 移除某个槽位里已选的配件（槽位卡片最右侧的删除按钮）
@@ -276,11 +322,14 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       id: plan.id,
       name: plan.name,
       components: Map.of(plan.components),
+      storages: List.of(plan.storages),
       customPower: plan.customPower,
     );
     updated.set(slot.key, null);
-    setState(() => _replace(plan.id, updated));
-    await _store.saveAll(_plans);
+    setState(() {
+      _replace(plan.id, updated);
+      _dirty = true;
+    });
   }
 
   /// 在方案详情页内联改某槽位配件的价格（实时刷新总价）
@@ -293,6 +342,7 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       id: plan.id,
       name: plan.name,
       components: Map.of(plan.components),
+      storages: List.of(plan.storages),
       customPower: plan.customPower,
     );
     updated.components[slot.key] = PlanComponent(
@@ -302,8 +352,79 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       price: price,
       platform: comp.platform,
     );
-    setState(() => _replace(plan.id, updated));
-    await _store.saveAll(_plans);
+    setState(() {
+      _replace(plan.id, updated);
+      _dirty = true;
+    });
+  }
+
+  Future<void> _pickStorage() async {
+    final plan = _current;
+    if (plan == null) return;
+    final result = await Navigator.push<(bool, PlanComponent?)>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ComponentPickerPage(
+          slotLabel: '硬盘',
+          category: '硬盘',
+          current: null,
+        ),
+      ),
+    );
+    if (result == null || result.$1 || result.$2 == null) return;
+    final updated = BuildPlan(
+      id: plan.id,
+      name: plan.name,
+      components: Map.of(plan.components),
+      storages: [...plan.storages, result.$2!],
+      customPower: plan.customPower,
+    );
+    setState(() {
+      _replace(plan.id, updated);
+      _dirty = true;
+    });
+  }
+
+  Future<void> _clearStorageAt(int index) async {
+    final plan = _current;
+    if (plan == null || index < 0 || index >= plan.storages.length) return;
+    final storages = List.of(plan.storages)..removeAt(index);
+    final updated = BuildPlan(
+      id: plan.id,
+      name: plan.name,
+      components: Map.of(plan.components),
+      storages: storages,
+      customPower: plan.customPower,
+    );
+    setState(() {
+      _replace(plan.id, updated);
+      _dirty = true;
+    });
+  }
+
+  Future<void> _setStoragePrice(int index, double price) async {
+    final plan = _current;
+    if (plan == null || index < 0 || index >= plan.storages.length) return;
+    final c = plan.storages[index];
+    final storages = List.of(plan.storages);
+    storages[index] = PlanComponent(
+      category: c.category,
+      brand: c.brand,
+      model: c.model,
+      price: price,
+      platform: c.platform,
+    );
+    final updated = BuildPlan(
+      id: plan.id,
+      name: plan.name,
+      components: Map.of(plan.components),
+      storages: storages,
+      customPower: plan.customPower,
+    );
+    setState(() {
+      _replace(plan.id, updated);
+      _dirty = true;
+    });
   }
 
   Future<void> _saveToItems() async {
@@ -398,12 +519,21 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     }
   }
 
-  /// 按槽位顺序列出配件摘要「品类 型号」
-  String _summary(BuildPlan plan) => kBuildSlots
-      .map((s) => plan[s.key])
-      .whereType<PlanComponent>()
-      .map((c) => '${c.category} ${c.model}')
-      .join(' · ');
+  /// 按槽位顺序列出配件摘要「品类 型号」（硬盘多块逐个列出）
+  String _summary(BuildPlan plan) {
+    final parts = <String>[];
+    for (final s in kBuildSlots) {
+      if (s.key == 'storage') {
+        for (final c in plan.storages) {
+          parts.add('${c.category} ${c.model}');
+        }
+      } else {
+        final c = plan[s.key];
+        if (c != null) parts.add('${c.category} ${c.model}');
+      }
+    }
+    return parts.join(' · ');
+  }
 
   HardwareItem _newItem(BuildPlan plan, String model) {
     return HardwareItem(
@@ -424,28 +554,23 @@ class _BuildPlanPageState extends State<BuildPlanPage>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  /// 把当前方案手动上传到云（按方案 id 幂等覆盖）
-  Future<void> _uploadToCloud(BuildPlan plan) async {
-    if (!AuthService.instance.isLoggedIn) {
-      _snack('请先在「我的」页登录');
-      return;
-    }
-    if (_uploading) return;
-    setState(() => _uploading = true);
+  /// 保存后自动上传到云（尽力而为，失败不打断本地流程）
+  Future<void> _autoUpload(BuildPlan plan) async {
+    if (!AuthService.instance.isLoggedIn) return;
     try {
-      final count = await CloudSync.countPlans();
-      if (count >= CloudSync.kMaxCloudPlans) {
-        _snack('云端方案已达上限（${CloudSync.kMaxCloudPlans} 个）');
-        return;
-      }
       await CloudSync.uploadPlan(plan);
-      _snack('已上传「${_planName(plan)}」到云');
-    } catch (e) {
-      _snack(e.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _uploading = false);
+    } catch (_) {
+      // 自动上传失败静默处理，下次保存会再试
     }
   }
+
+  BuildPlan _copyPlan(BuildPlan plan) => BuildPlan(
+        id: plan.id,
+        name: plan.name,
+        components: Map.of(plan.components),
+        storages: List.of(plan.storages),
+        customPower: plan.customPower,
+      );
 
   /// 已登录时自动从云拉取方案，按 id 去重并入本地；墓碑里的方案会被过滤
   Future<void> _autoSyncFromCloud() async {
@@ -496,10 +621,13 @@ class _BuildPlanPageState extends State<BuildPlanPage>
       id: plan.id,
       name: plan.name,
       components: plan.components,
+      storages: plan.storages,
       customPower: value,
     );
-    setState(() => _replace(plan.id, updated));
-    await _store.saveAll(_plans);
+    setState(() {
+      _replace(plan.id, updated);
+      _dirty = true;
+    });
     _snack(value == null ? '已清空自定义功耗' : '已设置整机功耗 ${_fmt(value)} W');
   }
 
@@ -715,7 +843,10 @@ class _BuildPlanPageState extends State<BuildPlanPage>
 
   Widget _planBody(BuildPlan plan) {
     final theme = Theme.of(context);
-    final filled = kBuildSlots.where((s) => plan[s.key] != null).length;
+    final filled = kBuildSlots
+        .where((s) =>
+            s.key == 'storage' ? plan.storages.isNotEmpty : plan[s.key] != null)
+        .length;
     return ListView(
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
@@ -740,15 +871,6 @@ class _BuildPlanPageState extends State<BuildPlanPage>
           label: const Text('保存到我的清单'),
           // 与「加入我的清单」等主按钮统一：胶囊圆角 + 半透明底色
           style: capsuleButtonStyle(theme),
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: (plan.components.isEmpty || _uploading)
-              ? null
-              : () => _uploadToCloud(plan),
-          icon: const Icon(Icons.cloud_upload_outlined),
-          label: Text(_uploading ? '上传中…' : '上传此方案到云'),
-          style: capsuleOutlinedButtonStyle(theme),
         ),
       ],
     );
@@ -851,14 +973,23 @@ class _BuildPlanPageState extends State<BuildPlanPage>
         children: [
           for (var i = 0; i < kBuildSlots.length; i++) ...[
             if (i > 0) const Divider(height: 1, indent: 56),
-            _SlotRow(
-              key: ValueKey('${plan.id}-${kBuildSlots[i].key}'),
-              slot: kBuildSlots[i],
-              comp: plan[kBuildSlots[i].key],
-              onPick: () => _pick(kBuildSlots[i]),
-              onClear: () => _clearSlot(kBuildSlots[i]),
-              onPriceChanged: (price) => _setPrice(kBuildSlots[i], price),
-            ),
+            if (kBuildSlots[i].key == 'storage')
+              _StorageSlot(
+                key: ValueKey('${plan.id}-storage'),
+                storages: plan.storages,
+                onPick: _pickStorage,
+                onClearAt: _clearStorageAt,
+                onPriceChanged: _setStoragePrice,
+              )
+            else
+              _SlotRow(
+                key: ValueKey('${plan.id}-${kBuildSlots[i].key}'),
+                slot: kBuildSlots[i],
+                comp: plan[kBuildSlots[i].key],
+                onPick: () => _pick(kBuildSlots[i]),
+                onClear: () => _clearSlot(kBuildSlots[i]),
+                onPriceChanged: (price) => _setPrice(kBuildSlots[i], price),
+              ),
           ],
         ],
       ),
@@ -1104,6 +1235,162 @@ class _SlotRowState extends State<_SlotRow> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 硬盘槽位（支持多块）：头部带「添加硬盘」，下面逐块列出，可内联改价/移除
+class _StorageSlot extends StatelessWidget {
+  const _StorageSlot({
+    super.key,
+    required this.storages,
+    required this.onPick,
+    required this.onClearAt,
+    required this.onPriceChanged,
+  });
+
+  final List<PlanComponent> storages;
+  final VoidCallback onPick;
+  final ValueChanged<int> onClearAt;
+  final void Function(int index, double price) onPriceChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            children: [
+              const CategoryBadge(category: '硬盘'),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  '硬盘',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: onPick,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('添加硬盘'),
+              ),
+            ],
+          ),
+        ),
+        if (storages.isEmpty)
+          InkWell(
+            onTap: onPick,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(44, 0, 12, 12),
+              child: Row(
+                children: [
+                  Text(
+                    '未选择',
+                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        for (var i = 0; i < storages.length; i++)
+          _StorageDriveRow(
+            key: ValueKey('${storages[i].model}-$i'),
+            comp: storages[i],
+            onClear: () => onClearAt(i),
+            onPriceChanged: (p) => onPriceChanged(i, p),
+          ),
+      ],
+    );
+  }
+}
+
+/// 硬盘槽位里的单块硬盘：型号 + 内联价格 + 移除
+class _StorageDriveRow extends StatefulWidget {
+  const _StorageDriveRow({
+    super.key,
+    required this.comp,
+    required this.onClear,
+    required this.onPriceChanged,
+  });
+
+  final PlanComponent comp;
+  final VoidCallback onClear;
+  final ValueChanged<double> onPriceChanged;
+
+  @override
+  State<_StorageDriveRow> createState() => _StorageDriveRowState();
+}
+
+class _StorageDriveRowState extends State<_StorageDriveRow> {
+  late final TextEditingController _price = TextEditingController(
+    text: widget.comp.price <= 0 ? '' : _fmt(widget.comp.price),
+  );
+
+  @override
+  void dispose() {
+    _price.dispose();
+    super.dispose();
+  }
+
+  void _onPriceChanged(String raw) {
+    final t = raw.trim();
+    if (t.isEmpty) return;
+    final n = double.tryParse(t);
+    if (n == null || n <= 0) return;
+    if (n > kMaxPrice) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('价格不能超过 8388608，请重新输入')),
+      );
+      return;
+    }
+    widget.onPriceChanged(n);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final comp = widget.comp;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(44, 0, 12, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              comp.brand.isEmpty ? comp.model : '${comp.model} · ${comp.brand}',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+          SizedBox(
+            width: 96,
+            child: TextField(
+              controller: _price,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: _onPriceChanged,
+              decoration: const InputDecoration(
+                prefixText: '¥ ',
+                hintText: '价格',
+                isDense: true,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: widget.onClear,
+            tooltip: '移除硬盘',
+            icon: Icon(
+              Icons.close,
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }

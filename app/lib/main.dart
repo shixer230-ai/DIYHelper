@@ -13,10 +13,13 @@ import 'cloud/cloud_app.dart';
 import 'pages/home_shell.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
+import 'utils/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ThemeController.instance.init();
+  // 初始化本地通知（感谢捐赠等系统消息）
+  await NotificationService.instance.init();
   // 初始化云开发（失败不阻塞启动，未就绪/未登录时再提示）
   await CloudApp.init();
   // 恢复云端登录会话（token 未过期则自动登录）

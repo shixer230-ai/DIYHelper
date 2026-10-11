@@ -23,6 +23,10 @@ String _planBody(BuildPlan plan) {
     final brand = c.brand.isEmpty ? '' : '（${c.brand}）';
     b.writeln('· ${c.category}：${c.model}$brand　¥${_fmtPrice(c.price)}');
   }
+  for (final c in plan.storages) {
+    final brand = c.brand.isEmpty ? '' : '（${c.brand}）';
+    b.writeln('· ${c.category}：${c.model}$brand　¥${_fmtPrice(c.price)}');
+  }
   b.writeln();
   b.writeln('整机总价：¥${_fmtPrice(plan.total)}');
   if (plan.customPower != null) {

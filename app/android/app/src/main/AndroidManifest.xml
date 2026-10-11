@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- 联网权限：云同步等联网功能需要（release 包默认不带，需在此显式声明）。 -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 通知权限：Android 13+ 发系统通知需要（感谢捐赠等）。 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="DIYAss"
         android:name="${applicationName}"

@@ -2,9 +2,11 @@ import 'dart:io';
 
 import 'package:cloudbase_flutter/cloudbase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../storage/avatar_image_store.dart';
 import '../theme/theme_controller.dart';
+import '../utils/notification_service.dart';
 import 'cloud_app.dart';
 
 /// 云端账号状态：登录/注册/登出，以及当前用户信息（单例，变更后通知监听者）
@@ -14,6 +16,7 @@ class AuthService extends ChangeNotifier {
   static final AuthService instance = AuthService._();
 
   User? _user;
+  bool _isDonator = false;
 
   /// 注册第二步的验证回调（第一步发验证码时暂存）
   Future<SignInRes> Function(VerifyOtpParams)? _pendingVerify;
@@ -21,6 +24,9 @@ class AuthService extends ChangeNotifier {
   User? get user => _user;
 
   bool get isLoggedIn => _user != null;
+
+  /// 是否捐赠用户（拥有 donator 专属标识与权益）
+  bool get isDonator => _isDonator;
 
   /// 用户名（登录标识）
   String? get username => _user?.userMetadata?.username;
@@ -100,6 +106,7 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       _adoptNickname();
       _syncAvatar();
+      await refreshDonator();
     } catch (_) {
       // 未登录/无网络，保持未登录
     }
@@ -116,6 +123,7 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
     _adoptNickname();
     _syncAvatar();
+    await refreshDonator();
   }
 
   /// 注册第一步：发验证码到邮箱，验证回调暂存
@@ -150,12 +158,14 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
     _adoptNickname();
     _syncAvatar();
+    await refreshDonator();
   }
 
   Future<void> signOut() async {
     await CloudApp.app.auth.signOut();
     _user = null;
     _pendingVerify = null;
+    _isDonator = false;
     notifyListeners();
   }
 
@@ -169,5 +179,39 @@ class AuthService extends ChangeNotifier {
     } catch (_) {
       // 拉取失败保持现状
     }
+  }
+
+  /// 拉取捐赠状态（donators 集合里是否有自己的记录）；变化时通知，首次识别到发感谢通知
+  Future<void> refreshDonator() async {
+    final u = uid;
+    if (u == null || u.isEmpty) {
+      if (_isDonator) {
+        _isDonator = false;
+        notifyListeners();
+      }
+      return;
+    }
+    try {
+      final db = CloudApp.app.database();
+      final res = await db.collection('donators').where({'uid': u}).get();
+      final v = res.isSuccess &&
+          res.data.isNotEmpty &&
+          res.data.first['enabled'] == true;
+      if (v != _isDonator) {
+        _isDonator = v;
+        notifyListeners();
+      }
+      if (v) await _maybeThankDonator();
+    } catch (_) {
+      // 拉取失败保持现状
+    }
+  }
+
+  /// 首次识别到捐赠时发一条感谢通知（只发一次）
+  Future<void> _maybeThankDonator() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('donator_notified') ?? false) return;
+    await prefs.setBool('donator_notified', true);
+    await NotificationService.instance.show('感谢捐赠', '感谢支持 DIYAss！٩(◕‿◕｡)۶');
   }
 }

@@ -40,12 +40,15 @@ class PlanComponent {
   }
 }
 
-/// 整机方案：按槽位（cpu/gpu/主板/内存/硬盘/电源/机箱）存放已选配件
+/// 整机方案：按槽位（cpu/gpu/主板/内存/电源/机箱）存放已选配件，硬盘支持多块
 /// 每个方案有自己的 id 和名称，可保存多个
 class BuildPlan {
   final String id;
   final String name;
   final Map<String, PlanComponent> components;
+
+  /// 硬盘可多块，单独用列表存（其余槽位每种一个，放在 components 里）
+  final List<PlanComponent> storages;
 
   /// 用户自定义的整机功耗（W），为空时分析页自动按 CPU+显卡 计算
   final double? customPower;
@@ -54,9 +57,11 @@ class BuildPlan {
     String? id,
     this.name = '',
     Map<String, PlanComponent>? components,
+    List<PlanComponent>? storages,
     this.customPower,
   })  : id = id ?? newId(),
-        components = components ?? {};
+        components = components ?? {},
+        storages = storages ?? [];
 
   static String newId() => 'plan_${DateTime.now().microsecondsSinceEpoch}';
 
@@ -70,9 +75,12 @@ class BuildPlan {
     }
   }
 
-  double get total => components.values.fold(0, (s, c) => s + c.price);
+  double get total =>
+      components.values.fold(0.0, (s, c) => s + c.price) +
+      storages.fold(0.0, (s, c) => s + c.price);
 
-  int get filledCount => components.length;
+  /// 已选硬件件数（含多块硬盘），用于列表展示「N 件」
+  int get filledCount => components.length + storages.length;
 
   factory BuildPlan.fromJson(Map<String, dynamic> json) {
     final comps = <String, PlanComponent>{};
@@ -81,10 +89,20 @@ class BuildPlan {
         comps[k] = PlanComponent.fromJson(Map<String, dynamic>.from(v));
       }
     });
+    final storages = <PlanComponent>[];
+    // 旧版本把硬盘放在 components['storage']，这里迁移到 storages 列表
+    final oldStorage = comps.remove('storage');
+    if (oldStorage != null) storages.add(oldStorage);
+    for (final v in asList(json['storages'])) {
+      if (v is Map) {
+        storages.add(PlanComponent.fromJson(Map<String, dynamic>.from(v)));
+      }
+    }
     return BuildPlan(
       id: asNullableString(json['id']),
       name: asString(json['name']),
       components: comps,
+      storages: storages,
       customPower: asNullableDouble(json['customPower']),
     );
   }
@@ -94,6 +112,7 @@ class BuildPlan {
       'id': id,
       'name': name,
       'components': components.map((k, v) => MapEntry(k, v.toJson())),
+      'storages': storages.map((e) => e.toJson()).toList(),
       'customPower': customPower,
     };
   }

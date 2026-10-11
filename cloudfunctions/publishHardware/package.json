@@ -1,0 +1,9 @@
+{
+  "name": "publishHardware",
+  "version": "1.0.0",
+  "description": "开发者发布新硬件到云端硬件库（密钥校验）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.9.0"
+  }
+}

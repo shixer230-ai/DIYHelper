@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../data/hardware_catalog.dart';
+import '../data/hardware_library.dart';
 import '../models/hardware_spec.dart';
+import '../storage/hardware_catalog_store.dart';
 import '../storage/user_spec_store.dart';
 import '../theme/app_theme.dart';
 import '../utils/category_icons.dart';
@@ -22,6 +24,8 @@ class _CatalogPageState extends State<CatalogPage>
   final _userStore = UserSpecStore();
   final _searchController = TextEditingController();
   List<HardwareSpec> _userSpecs = [];
+  List<HardwareSpec> _cloudSpecs = [];
+  bool _cloudSynced = false;
   String _query = '';
 
   // 预置库的品类顺序（即各 Tab 的顺序）
@@ -66,8 +70,23 @@ class _CatalogPageState extends State<CatalogPage>
 
   Future<void> _load() async {
     final specs = await _userStore.loadAll();
+    final cloud = await HardwareCatalogStore().load();
     if (!mounted) return;
-    setState(() => _userSpecs = specs);
+    setState(() {
+      _userSpecs = specs;
+      _cloudSpecs = cloud;
+    });
+    _refreshCloud();
+  }
+
+  /// 后台拉最新云端硬件并刷新（每次进入硬件库只同步一次）
+  Future<void> _refreshCloud() async {
+    if (_cloudSynced) return;
+    _cloudSynced = true;
+    await syncHardwareCatalogFromCloud();
+    final cloud = await HardwareCatalogStore().load();
+    if (!mounted) return;
+    setState(() => _cloudSpecs = cloud);
   }
 
   Future<void> _openDetail(HardwareSpec spec) async {
@@ -90,7 +109,7 @@ class _CatalogPageState extends State<CatalogPage>
   bool get _searching => _query.trim().isNotEmpty;
 
   List<HardwareSpec> get _searchResults {
-    final all = [...kHardwareCatalog, ..._userSpecs];
+    final all = [...kHardwareCatalog, ..._cloudSpecs, ..._userSpecs];
     return all.where((s) => hardwareMatches(s, _query)).toList();
   }
 
@@ -293,7 +312,7 @@ class _CatalogPageState extends State<CatalogPage>
   }
 
   Widget _buildCategoryTab(String category) {
-    final specs = kHardwareCatalog
+    final specs = [...kHardwareCatalog, ..._cloudSpecs]
         .where((s) => s.category == category)
         .toList();
     final sections = _brandSections(category, specs);

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../app_info.dart';
 import '../cloud/auth_service.dart';
@@ -138,11 +139,49 @@ class ProfilePage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            nickname,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                          ListenableBuilder(
+                            listenable: AuthService.instance,
+                            builder: (context, _) {
+                              final isDonator = AuthService.instance.isDonator;
+                              return Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      nickname,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isDonator) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFFF9800),
+                                            Color(0xFFE91E63),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: const Text(
+                                        'donator',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              );
+                            },
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -488,6 +527,37 @@ class ProfilePage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showVersionLog(context),
           ),
+          ListTile(
+            leading: const Icon(Icons.favorite, color: Colors.pink),
+            title: const Text('支持开发'),
+            subtitle: const Text('捐赠后可获得 donator 专属标识，AI 分析次数提高到每天 50 次'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openDonate(context),
+          ),
+          ListenableBuilder(
+            listenable: AuthService.instance,
+            builder: (context, _) {
+              final isDonator = AuthService.instance.isDonator;
+              return ListTile(
+                leading: Icon(
+                  isDonator
+                      ? Icons.workspace_premium
+                      : Icons.workspace_premium_outlined,
+                  color: isDonator ? Colors.amber : null,
+                ),
+                title: Text(isDonator ? 'donator 已开通' : '开通 donator'),
+                subtitle: Text(
+                  isDonator
+                      ? '感谢支持，专属标识与 50 次/天已生效'
+                      : '捐赠后填订单号，自动开通专属标识与权益',
+                ),
+                trailing: isDonator
+                    ? const Icon(Icons.check_circle, color: Colors.amber)
+                    : const Icon(Icons.chevron_right),
+                onTap: isDonator ? null : () => _openDonator(context),
+              );
+            },
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
             child: Row(
@@ -506,6 +576,47 @@ class ProfilePage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _openDonate(BuildContext context) async {
+    final url = kDonateUrl;
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('捐赠链接尚未配置')),
+      );
+      return;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  /// 开通 donator：填爱发电订单号，云函数查单后自动开通
+  Future<void> _openDonator(BuildContext context) async {
+    if (!AuthService.instance.isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先登录，再开通 donator')),
+      );
+      return;
+    }
+    final orderNo = await showDialog<String>(
+      context: context,
+      builder: (_) => const _DonatorDialog(),
+    );
+    if (orderNo == null || !context.mounted) return;
+    try {
+      await CloudSync.verifyDonation(orderNo);
+      await AuthService.instance.refreshDonator();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('开通成功，感谢支持！٩(◕‿◕｡)۶')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   void _showVersionLog(BuildContext context) {
@@ -644,6 +755,64 @@ class _NicknameDialogState extends State<_NicknameDialog> {
   }
 }
 
+/// 开通 donator 的对话框：填爱发电订单号
+class _DonatorDialog extends StatefulWidget {
+  const _DonatorDialog();
+
+  @override
+  State<_DonatorDialog> createState() => _DonatorDialogState();
+}
+
+class _DonatorDialogState extends State<_DonatorDialog> {
+  final _c = TextEditingController();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final t = _c.text.trim();
+    if (t.isEmpty) return;
+    Navigator.pop(context, t);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('开通 donator'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('捐赠后，在爱发电的订单记录里找到订单号，填到下面即可自动开通。'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _c,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: '爱发电订单号',
+              hintText: '形如 2026xxxxx...',
+            ),
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          style: capsuleButtonStyle(Theme.of(context), fullWidth: false),
+          child: const Text('开通'),
+        ),
+      ],
+    );
+  }
+}
+
 /// 选择要导出的方案
 class _ExportSheet extends StatelessWidget {
   const _ExportSheet({required this.plans});
@@ -702,6 +871,13 @@ String configText(BuildPlan plan) {
   buf.writeln('【DIYHelper 配置单】${_planName(plan)}');
   buf.writeln('──────────────');
   for (final slot in kBuildSlots) {
+    if (slot.key == 'storage') {
+      for (final c in plan.storages) {
+        final brand = c.brand.isEmpty ? '' : ' · ${c.brand}';
+        buf.writeln('${slot.label}  ${c.model}$brand  ¥${_fmt(c.price)}');
+      }
+      continue;
+    }
     final c = plan[slot.key];
     if (c == null) continue;
     final brand = c.brand.isEmpty ? '' : ' · ${c.brand}';
@@ -730,6 +906,7 @@ BuildPlan? parseConfig(String text) {
   if (name.isEmpty) name = '导入的方案';
 
   final components = <String, PlanComponent>{};
+  final storages = <PlanComponent>[];
   for (final slot in kBuildSlots) {
     for (final l in lines) {
       final prefix = '${slot.label} ';
@@ -749,19 +926,24 @@ BuildPlan? parseConfig(String text) {
       final brand = parts.length > 1 ? parts[1].trim() : '';
       if (model.isEmpty) break;
 
-      components[slot.key] = PlanComponent(
+      final comp = PlanComponent(
         category: slot.category,
         brand: brand,
         model: model,
         price: price,
         platform: '',
       );
+      if (slot.key == 'storage') {
+        storages.add(comp);
+      } else {
+        components[slot.key] = comp;
+      }
       break;
     }
   }
 
-  if (components.isEmpty) return null;
-  return BuildPlan(name: name, components: components);
+  if (components.isEmpty && storages.isEmpty) return null;
+  return BuildPlan(name: name, components: components, storages: storages);
 }
 
 /// 粘贴配置单文本的对话框；打开时自动填充剪贴板内容
